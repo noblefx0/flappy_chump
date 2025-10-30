@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flappy CHUMP</title>
+  <style>
+  body {
+    display:flex; justify-content:center; align-items:center;
+    height:100vh; margin:0;
+    background:#0d0d1a; font-family:Arial, sans-serif;
+  }
+
+  #game-board {
+    width:350px; height:600px;
+    position:relative; overflow:hidden;
+    border:5px solid #ffaa00;
+    box-shadow:0 0 20px rgba(0,0,0,.5);
+    touch-action:none; user-select:none;
+    
+    /* 🖼️ NEW BACKGROUND IMAGE (UPDATE THIS LINK) 🖼️ */
+    background:url('YOUR_HOSTED_BACKGROUND_IMAGE_LINK_HERE') center/cover no-repeat;
+    /* You must upload your file and get a direct link! */
+    /* ---------------------------------------------------- */
+    
+    z-index:0;
+  }
+
+  #chump {
+    position:absolute; width:50px; height:50px; left:85px; top:275px;
+    background-image:url('https://i.imgur.com/vFYnY6K.png');
+    background-size:contain; background-repeat:no-repeat;
+    z-index:10;
+    transition:transform .05s linear;
+  }
+
+  .obstacle {
+    position:absolute; width:40px;
+    background-color: #cc0000;
+    border: 1px solid #660000;
+    z-index:5;
+  }
+
+  .obstacle.top {
+    top:0;
+    border-bottom:5px solid #660000;
+  }
+
+  .obstacle.bottom {
+    bottom:0;
+    border-top:5px solid #660000;
+  }
+
+  #score {
+    position:absolute; top:20px; width:100%; text-align:center;
+    font-size:3em; color:#fff; text-shadow:3px 3px #000; z-index:20;
+  }
+
+  #game-start-screen, #game-over-screen, #howto-screen {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,.85);
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    z-index:30; color:white; text-align:center;
+  }
+
+  #game-start-screen h1,#game-over-screen h1, #howto-screen h1 {
+    color:#FF8000; margin:0;
+  }
+
+  #game-start-screen p,#game-over-screen p, #howto-screen p {
+    color:#ccc; margin:6px 0;
+  }
+
+  #howto-screen {
+    z-index:35;
+    padding:0 20px;
+  }
+
+  #howto-screen h1 { font-size:2em; }
+  #howto-screen p { font-size:1em; }
+
+  #game-start-screen button, #game-over-screen button, #howto-screen button, #mute-button {
+    padding:10px 20px; font-size:1.1em; margin-top:12px;
+    background:#FF8000; color:white; border:2px solid #FFD700; border-radius:8px; cursor:pointer;
+  }
+
+  #mute-button {
+    position:absolute; top:8px; left:8px;
+    background:#5555ff; border-color:#5555ff; z-index:40;
+  }
+
+  .hidden { display:none !important; }
+  </style>
+</head>
+<body>
+  <div id="game-board">
+    <div id="score">0</div>
+    <div id="chump"></div>
+
+    <div id="game-start-screen">
+      <h1>Flappy Monkey</h1>
+      <p>Tap the button to start!</p>
+      <button id="start-button">Start Chumping!</button>
+      <button id="howto-button">How to play</button>
+    </div>
+
+    <div id="howto-screen" class="hidden">
+      <h1>How to Play</h1>
+      <p>• Click or tap the screen to flap your monkey up.</p>
+      <p>• Score points by successfully navigating the gap between the red candles.</p>
+      <p>• Avoid hitting the candles or the ground/sky!</p>
+      <button id="howto-close-button">Got it!</button>
+    </div>
+
+    <div id="game-over-screen" class="hidden">
+      <h1>GAME OVER!</h1>
+      <p id="final-score">Your Score: 0</p>
+      <button id="restart-button">Return Home</button>
+    </div>
+
+    <button id="mute-button">🔊</button>
+  </div>
+
+  <script>
+    const gameBoard = document.getElementById('game-board');
+    const chump = document.getElementById('chump');
+    const scoreDisplay = document.getElementById('score');
+    const startScreen = document.getElementById('game-start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const startButton = document.getElementById('start-button');
+    const restartButton = document.getElementById('restart-button');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const muteButton = document.getElementById('mute-button');
+    const howtoButton = document.getElementById('howto-button');
+    const howtoScreen = document.getElementById('howto-screen');
+    const howtoCloseButton = document.getElementById('howto-close-button');
+
+    const GAME_WIDTH = 350, GAME_HEIGHT = 600, CHUMP_SIZE = 50, OBSTACLE_WIDTH = 40;
+    const OBSTACLE_SPEED = 1.5, OBSTACLE_SPAWN_RATE = 2500;
+    const GRAVITY = 0.4, JUMP_STRENGTH = -7.5;
+    const GAP_SIZE = 200, HITBOX_BUFFER = 5;
+
+    let gameLoopId=null, obstacleSpawnId=null;
+    let chumpY=GAME_HEIGHT/2, chumpVelocity=0, obstacles=[], score=0;
+    let isGameOver=true, isMuted=false, gameStarted=false;
+    const CHUMP_X = 85;
+
+    function updateScore(){ scoreDisplay.textContent = score; }
+    function resetObstacles(){ obstacles.forEach(o=>{o.top.element.remove();o.bottom.element.remove();}); obstacles=[]; }
+
+    function resetGame() {
+      if(gameLoopId) cancelAnimationFrame(gameLoopId);
+      if(obstacleSpawnId) clearInterval(obstacleSpawnId);
+      isGameOver=false; gameStarted=true;
+      score=0; chumpY=GAME_HEIGHT/2; chumpVelocity=0;
+      updateScore(); resetObstacles();
+      startScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden');
+      chump.style.display='block';
+      gameLoopId=requestAnimationFrame(updateGame);
+      obstacleSpawnId=setInterval(createObstacle, OBSTACLE_SPAWN_RATE);
+    }
+
+    function endGame() {
+      if(isGameOver) return;
+      isGameOver=true;
+      cancelAnimationFrame(gameLoopId);
+      clearInterval(obstacleSpawnId);
+      chump.style.display='none';
+      finalScoreDisplay.textContent=`Your Score: ${score}`;
+      gameOverScreen.classList.remove('hidden');
+      gameStarted=false;
+    }
+
+    function flap(){ if(!isGameOver) { chumpVelocity=JUMP_STRENGTH; chump.style.transform='rotate(-15deg)'; } }
+
+    function createObstacle() {
+      const minHeight=50;
+      const maxTopHeight=GAME_HEIGHT-minHeight-GAP_SIZE;
+      const topHeight=Math.floor(Math.random()*(maxTopHeight-minHeight+1))+minHeight;
+      const bottomHeight=GAME_HEIGHT-topHeight-GAP_SIZE;
+      const obstacleX=GAME_WIDTH;
+
+      const topPipe=document.createElement('div');
+      topPipe.className='obstacle top';
+      topPipe.style.height=`${topHeight}px`;
+      topPipe.style.left=`${obstacleX}px`;
+      gameBoard.appendChild(topPipe);
+
+      const bottomPipe=document.createElement('div');
+      bottomPipe.className='obstacle bottom';
+      bottomPipe.style.height=`${bottomHeight}px`;
+      bottomPipe.style.left=`${obstacleX}px`;
+      gameBoard.appendChild(bottomPipe);
+
+      obstacles.push({x:obstacleX, top:{element:topPipe,height:topHeight}, bottom:{element:bottomPipe,height:bottomHeight}, passed:false});
+    }
+
+    function updateObstacles(){
+      for(let i=obstacles.length-1;i>=0;i--){
+        const obs=obstacles[i];
+        obs.x-=OBSTACLE_SPEED;
+        obs.top.element.style.left=`${obs.x}px`;
+        obs.bottom.element.style.left=`${obs.x}px`;
+        if(obs.x+OBSTACLE_WIDTH<CHUMP_X && !obs.passed){ score++; updateScore(); obs.passed=true; }
+        if(obs.x<-OBSTACLE_WIDTH){ obs.top.element.remove(); obs.bottom.element.remove(); obstacles.splice(i,1); }
+        checkCollision(obs);
+      }
+    }
+
+    function checkCollision(obstacle){
+      const chumpTop=chumpY;
+      const chumpBottom=chumpY+CHUMP_SIZE;
+      const obsLeft=obstacle.x, obsRight=obstacle.x+OBSTACLE_WIDTH;
+
+      if(CHUMP_X + CHUMP_SIZE - HITBOX_BUFFER > obsLeft && CHUMP_X + HITBOX_BUFFER < obsRight){
+        const hitTopPipe = chumpTop+HITBOX_BUFFER < obstacle.top.height;
+        const hitBottomPipe = chumpBottom-HITBOX_BUFFER > (GAME_HEIGHT-obstacle.bottom.height);
+        if(hitTopPipe || hitBottomPipe) endGame();
+      }
+    }
+
+    function updateChump(){
+      chumpVelocity+=GRAVITY;
+      chumpY+=chumpVelocity;
+      chump.style.top=`${chumpY}px`;
+      const rotation=Math.min(Math.max(chumpVelocity*2,-15),90);
+      chump.style.transform=`rotate(${rotation}deg)`;
+      if(chumpY>GAME_HEIGHT-CHUMP_SIZE||chumpY<0) endGame();
+    }
+
+    function updateGame(){ if(isGameOver) return; updateChump(); updateObstacles(); gameLoopId=requestAnimationFrame(updateGame); }
+
+    startButton.addEventListener('click',()=>{ resetGame(); });
+    restartButton.addEventListener('click',()=>{ gameOverScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); });
+
+    howtoButton.addEventListener('click',()=>{
+        howtoScreen.classList.remove('hidden');
+    });
+    howtoCloseButton.addEventListener('click',()=>{
+        howtoScreen.classList.add('hidden');
+    });
+
+    muteButton.addEventListener('click',()=>{ isMuted=!isMuted; muteButton.textContent=isMuted?'🔇':'🔊'; });
+
+    gameBoard.addEventListener('click',()=>{ if(gameStarted) flap(); });
+    gameBoard.addEventListener('touchstart',e=>{ if(gameStarted){ e.preventDefault(); flap(); }},{passive:false});
+    document.addEventListener('keydown',e=>{
+      if(e.code==='Space'){ e.preventDefault(); if(gameStarted) flap(); }
+      else if(e.key.toLowerCase()==='m'){ isMuted=!isMuted; muteButton.textContent=isMuted?'🔇':'🔊'; }
+    });
+
+    updateScore();
+  </script>
+</body>
+</html>

@@ -311,16 +311,15 @@
     const BASE_SPAWN_RATE = 2500;
     const SPEED_INCREASE_PER_5 = 0.3;
     const SPAWN_RATE_DECREASE_PER_5 = 200;
-    const GRAVITY = 0.2; // Reduced for gentler fall
-    const JUMP_STRENGTH = -5.0; // Adjusted for balance
+    const GRAVITY = 0.4;
+    const JUMP_STRENGTH = -7.5;
     const GAP_SIZE = 200;
     const HITBOX_BUFFER = 5;
     const GAME_WIDTH = 400; /* Updated width */
     const GAME_HEIGHT = 700; /* Updated height */
     const CHUMP_SIZE = 50;
     const OBSTACLE_WIDTH = 40;
-    const MAX_OBSTACLES = 5; // Reduced limit
-    const MAX_FRAMESKIP = 2; // Cap frame skips
+    const CHUMP_X = 100; /* Adjusted for new width */
 
     /* ---------- DYNAMIC STATE ---------- */
     let gameLoopId = null;
@@ -336,8 +335,6 @@
     let currentObstacleSpeed = BASE_OBSTACLE_SPEED;
     let currentSpawnRate = BASE_SPAWN_RATE;
     let awaitingFirstTap = false; // Flag for "Play Again" state
-    let lastFrameTime = performance.now();
-    let frameSkipCount = 0;
 
     /* ---------- AUDIO: TRUE RANDOM + DING ---------- */
     const bgmUrls = [
@@ -445,7 +442,6 @@
       chump.style.top = `${chumpY}px`;
       newRecordMsg.classList.add('hidden');
       awaitingFirstTap = true; // Set flag after reset
-      frameSkipCount = 0;
     }
 
     function endGame() {
@@ -471,12 +467,11 @@
         gameLoopId = requestAnimationFrame(updateGame);
         obstacleSpawnId = setInterval(createObstacle, currentSpawnRate);
       }
-      chumpVelocity = JUMP_STRENGTH; // Adjusted jump strength
+      chumpVelocity = JUMP_STRENGTH; // Always apply jump strength
       chump.style.transform = 'rotate(-15deg)';
     }
 
     function createObstacle() {
-      if (obstacles.length >= MAX_OBSTACLES) return; // Limit obstacles
       const minHeight = 50;
       const maxTopHeight = GAME_HEIGHT - minHeight - GAP_SIZE;
       const topHeight = Math.floor(Math.random() * (maxTopHeight - minHeight + 1)) + minHeight;
@@ -521,9 +516,8 @@
           obs.top.element.remove();
           obs.bottom.element.remove();
           obstacles.splice(i, 1);
-        } else {
-          checkCollision(obs);
         }
+        checkCollision(obs);
       }
     }
 
@@ -540,7 +534,7 @@
     }
 
     function updateChump() {
-      chumpVelocity += GRAVITY; // Reduced gravity
+      chumpVelocity += GRAVITY;
       chumpY += chumpVelocity;
       chump.style.top = `${chumpY}px`;
       const rotation = Math.min(Math.max(chumpVelocity * 2, -15), 90);
@@ -548,43 +542,11 @@
       if (chumpY > GAME_HEIGHT - CHUMP_SIZE || chumpY < 0) endGame();
     }
 
-    function performanceCheck() {
-      const now = performance.now();
-      const delta = now - lastFrameTime;
-      if (delta > 50) { // Stricter threshold (50ms = 20 FPS)
-        frameSkipCount++;
-        if (frameSkipCount > MAX_FRAMESKIP) {
-          console.warn('Excessive frame skips detected:', frameSkipCount, 'delta:', delta);
-          resetGameLoop();
-        }
-      } else {
-        frameSkipCount = 0;
-      }
-      lastFrameTime = now;
-    }
-
     function updateGame() {
       if (isGameOver) return;
-      console.time('Frame');
-      performanceCheck();
       updateChump();
       updateObstacles();
       gameLoopId = requestAnimationFrame(updateGame);
-      console.timeEnd('Frame');
-      console.log('Frame update:', {
-        score,
-        chumpY,
-        obstacleCount: obstacles.length,
-        time: performance.now(),
-        frameSkipCount
-      });
-    }
-
-    function resetGameLoop() {
-      if (gameLoopId) cancelAnimationFrame(gameLoopId);
-      gameLoopId = requestAnimationFrame(updateGame);
-      console.log('Game loop reset at:', performance.now());
-      frameSkipCount = 0;
     }
 
     /* ---------- EVENT LISTENERS ---------- */
@@ -621,11 +583,9 @@
     document.addEventListener('keydown', e => {
       if (e.code === 'Space') { e.preventDefault(); flap(); }
       else if (e.key.toLowerCase() === 'm') { isMuted = !isMuted; muteButton.textContent = isMuted ? 'Muted' : 'Speaker'; }
-      else if (e.key === 'r') { resetGameLoop(); } // Debug reset with 'r' key
     });
 
     updateScore();
-    // Power-ups removed for now
   </script>
 </body>
 </html>

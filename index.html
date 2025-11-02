@@ -64,10 +64,28 @@
       text-align: center;
       font-size: 1.5em;
       color: #FFD700; /* KEEP: Gold high score */
-      text-shadow: 2px 2px #000000; /* KEEP: Black shadow */
+      text-shadow: 2px 2px #000000; /* Black shadow */
       z-index: 20;
     }
-    
+    #banana-score {
+      position: absolute;
+      top: 100px;
+      width: 100%;
+      text-align: center;
+      font-size: 1.5em;
+      color: #FFD700; /* Gold for banana score */
+      text-shadow: 2px 2px #000000; /* Black shadow */
+      z-index: 20;
+    }
+    .banana {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      font-size: 30px;
+      text-align: center;
+      line-height: 30px;
+      z-index: 15; /* Increased z-index to ensure visibility */
+    }
     /* SCREENS */
     #character-select, #game-start-screen, #game-over-screen, #howto-screen {
       position: absolute;
@@ -118,7 +136,7 @@
       touch-action: manipulation;
     }
     .char-option.selected {
-      border-color: #00ff00; /* Green border when selected */
+      border-color: #00ff00; /* Green border when collected */
       transform: scale(1.1);
       box-shadow: 0 0 20px #00ff00; /* Green glow */
     }
@@ -177,6 +195,7 @@
   <div id="game-board">
     <div id="score">0</div>
     <div id="high-score">HIGH: 0</div>
+    <div id="banana-score">BANANAS: 0</div>
     <div id="chump"></div>
 
     <!-- CHARACTER SELECT -->
@@ -206,7 +225,7 @@
       <h1>How to Play</h1>
       <p>Click or tap to flap</p>
       <p>Pass through gaps to score</p>
-      <p>Avoid candles & edges!</p>
+      <p>Avoid candles & collect 🍌!</p>
       <button id="howto-close-button">Got it!</button>
     </div>
 
@@ -214,6 +233,7 @@
     <div id="game-over-screen" class="hidden">
       <h1>GAME OVER!</h1>
       <p id="final-score">Your Score: 0</p>
+      <p id="final-banana-score">Bananas Collected: 0</p>
       <p id="new-record" class="hidden">NEW RECORD!</p>
       <button id="go-home-button">Go Back Home</button>
       <button id="play-again-button">Play Again</button>
@@ -228,6 +248,7 @@
     const chump = document.getElementById('chump');
     const scoreDisplay = document.getElementById('score');
     const highScoreDisplay = document.getElementById('high-score');
+    const bananaScoreDisplay = document.getElementById('banana-score');
     const startHighScore = document.getElementById('start-high-score');
     const charSelect = document.getElementById('character-select');
     const charGrid = document.getElementById('character-grid');
@@ -237,6 +258,7 @@
     const startScreen = document.getElementById('game-start-screen');
     const gameOverScreen = document.getElementById('game-over-screen');
     const finalScoreDisplay = document.getElementById('final-score');
+    const finalBananaScoreDisplay = document.getElementById('final-banana-score');
     const newRecordMsg = document.getElementById('new-record');
     const startButton = document.getElementById('start-button');
     const goHomeButton = document.getElementById('go-home-button');
@@ -289,12 +311,12 @@
       startScreen.classList.remove('hidden');
     });
 
-    /* ---------- HIGH SCORE ---------- */
+    /* ---------- HIGH SCORES ---------- */
     let highScore = parseInt(localStorage.getItem('flappyMonkeyHighScore')) || 0;
     highScoreDisplay.textContent = `HIGH: ${highScore}`;
     startHighScore.textContent = highScore;
 
-    function saveHighScore() {
+    function saveHighScores() {
       if (score > highScore) {
         highScore = score;
         localStorage.setItem('flappyMonkeyHighScore', highScore);
@@ -320,6 +342,8 @@
     const CHUMP_SIZE = 50;
     const OBSTACLE_WIDTH = 40;
     const CHUMP_X = 100; /* Adjusted for new width */
+    const BANANA_SIZE = 30;
+    const BANANA_SPAWN_CHANCE = 0.3; // 30% chance as per your tweak
 
     /* ---------- DYNAMIC STATE ---------- */
     let gameLoopId = null;
@@ -327,7 +351,9 @@
     let chumpY = GAME_HEIGHT / 2;
     let chumpVelocity = 0;
     let obstacles = [];
+    let bananas = [];
     let score = 0;
+    let bananaScore = parseInt(localStorage.getItem('flappyMonkeyBananaScore')) || 0; // Load persistent total
     let isGameOver = true;
     let isMuted = false;
     let gameStarted = false;
@@ -359,6 +385,9 @@
     const scoreSound = new Audio('https://files.catbox.moe/pev2v4.wav');
     scoreSound.volume = 0.4;
     scoreSound.preload = 'auto';
+    const bananaSound = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3'); // Simple collect sound
+    bananaSound.volume = 0.4;
+    bananaSound.preload = 'auto';
 
     function stopBGM() {
       bgmList.forEach(bgm => {
@@ -380,6 +409,13 @@
       if (!isMuted && audioUnlocked) {
         scoreSound.currentTime = 0;
         scoreSound.play().catch(() => {});
+      }
+    }
+
+    function playBananaSound() {
+      if (!isMuted && audioUnlocked) {
+        bananaSound.currentTime = 0;
+        bananaSound.play().catch(() => {});
       }
     }
 
@@ -413,8 +449,10 @@
     /* ---------- GAME LOGIC ---------- */
     function updateScore() {
       scoreDisplay.textContent = score;
+      bananaScoreDisplay.textContent = `BANANAS: ${bananaScore}`;
       increaseDifficulty();
     }
+
     function resetObstacles() {
       obstacles.forEach(o => {
         o.top?.element?.remove();
@@ -423,19 +461,25 @@
       obstacles = [];
     }
 
+    function resetBananas() {
+      bananas.forEach(b => b.element?.remove());
+      bananas = [];
+    }
+
     function resetGame() {
       if (gameLoopId) cancelAnimationFrame(gameLoopId);
       if (obstacleSpawnId) clearInterval(obstacleSpawnId);
       stopBGM();
       isGameOver = false;
       gameStarted = false;
-      score = 0;
+      score = 0; // Reset score, but keep bananaScore
       currentObstacleSpeed = BASE_OBSTACLE_SPEED;
       currentSpawnRate = BASE_SPAWN_RATE;
       chumpY = GAME_HEIGHT / 2;
       chumpVelocity = 0;
       updateScore();
       resetObstacles();
+      resetBananas();
       startScreen.classList.add('hidden');
       gameOverScreen.classList.add('hidden');
       chump.style.display = 'block';
@@ -452,7 +496,10 @@
       stopBGM();
       chump.style.display = 'none';
       finalScoreDisplay.textContent = `Your Score: ${score}`;
-      saveHighScore();
+      finalBananaScoreDisplay.textContent = `Bananas Collected: ${bananaScore}`;
+      saveHighScores();
+      // Save bananaScore to localStorage
+      localStorage.setItem('flappyMonkeyBananaScore', bananaScore);
       gameOverScreen.classList.remove('hidden');
       gameStarted = false;
     }
@@ -496,6 +543,29 @@
         bottom: { element: bottomPipe, height: bottomHeight },
         passed: false
       });
+
+      // Random chance to spawn banana
+      if (Math.random() < BANANA_SPAWN_CHANCE) {
+        createBanana(obstacleX, topHeight);
+        console.log("Banana spawned at x:", obstacleX, "y:", topHeight + (GAP_SIZE / 2) - (BANANA_SIZE / 2));
+      }
+    }
+
+    function createBanana(obstacleX, gapTop) {
+      if (!gameStarted || isGameOver) return;
+      const bananaY = gapTop + (GAP_SIZE / 2) - (BANANA_SIZE / 2); // Center of the gap
+      const bananaElement = document.createElement('div');
+      bananaElement.className = 'banana';
+      bananaElement.textContent = '🍌';
+      bananaElement.style.left = `${obstacleX}px`;
+      bananaElement.style.top = `${bananaY}px`;
+      gameBoard.appendChild(bananaElement);
+
+      bananas.push({
+        x: obstacleX,
+        y: bananaY,
+        element: bananaElement
+      });
     }
 
     function updateObstacles() {
@@ -518,6 +588,34 @@
           obstacles.splice(i, 1);
         }
         checkCollision(obs);
+      }
+    }
+
+    function updateBananas() {
+      for (let i = bananas.length - 1; i >= 0; i--) {
+        const banana = bananas[i];
+        banana.x -= currentObstacleSpeed;
+        banana.element.style.left = `${banana.x}px`;
+
+        // Check collision with chump
+        const chumpTop = chumpY;
+        const chumpBottom = chumpY + CHUMP_SIZE;
+        const bananaTop = banana.y;
+        const bananaBottom = banana.y + BANANA_SIZE;
+        if (CHUMP_X + CHUMP_SIZE > banana.x && CHUMP_X < banana.x + BANANA_SIZE &&
+            chumpBottom > bananaTop && chumpTop < bananaBottom) {
+          banana.element.remove();
+          bananas.splice(i, 1);
+          bananaScore++; // Increment total bananas
+          updateScore();
+          playBananaSound();
+          console.log("Banana collected, total now:", bananaScore);
+        }
+
+        if (banana.x < -BANANA_SIZE) {
+          banana.element.remove();
+          bananas.splice(i, 1);
+        }
       }
     }
 
@@ -546,6 +644,7 @@
       if (isGameOver) return;
       updateChump();
       updateObstacles();
+      updateBananas();
       gameLoopId = requestAnimationFrame(updateGame);
     }
 
@@ -588,4 +687,4 @@
     updateScore();
   </script>
 </body>
-</html>
+</html> 

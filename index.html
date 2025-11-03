@@ -11,7 +11,7 @@
       align-items: center;
       height: 100vh;
       margin: 0;
-      background: #1a2a6e; /* Deep blue background */
+      background: #1E3A8A; /* New main color: deep bold blue */
       font-family: Arial, sans-serif;
       overflow: hidden;
     }
@@ -20,8 +20,8 @@
       height: 700px; /* Updated height */
       position: relative;
       overflow: hidden;
-      border: 5px solid #00ff00; /* Bright green border */
-      box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); /* Green shadow */
+      border: 6px solid #1E40AF; /* Darker blue, thicker border */
+      box-shadow: 0 0 10px rgba(30, 64, 175, 0.3); /* Subdued shadow */
       touch-action: none;
       user-select: none;
       background: url('https://i.pinimg.com/736x/4e/8e/c3/4e8ec376a1f587c358739ef3c233f253.jpg') center/cover no-repeat;
@@ -38,12 +38,21 @@
       z-index: 10;
       transition: transform 0.05s linear;
     }
+    #rocket-video {
+      display: none;
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      z-index: 11;
+    }
     .obstacle {
       position: absolute;
       width: 40px;
+      height: auto; /* Allow height to adjust based on style */
       background-color: #cc0000; /* KEEP: Red candles */
       border: 1px solid #660000; /* KEEP: Dark red border */
       z-index: 5;
+      box-sizing: border-box; /* Ensure border is included in width/height */
     }
     .obstacle.top { top: 0; border-bottom: 5px solid #660000; }
     .obstacle.bottom { bottom: 0; border-top: 5px solid #660000; }
@@ -53,8 +62,8 @@
       width: 100%;
       text-align: center;
       font-size: 3em;
-      color: #0000ff; /* Blue score text */
-      text-shadow: 3px 3px #00ff00; /* Green shadow */
+      color: #3B82F6; /* Light blue for text */
+      text-shadow: 2px 2px #1E3A8A; /* Match main color for shadow */
       z-index: 20;
     }
     #high-score {
@@ -84,16 +93,16 @@
       font-size: 30px;
       text-align: center;
       line-height: 30px;
-      z-index: 15; /* Increased z-index to ensure visibility */
+      z-index: 15; /* Ensure visibility */
     }
     /* SCREENS */
-    #character-select, #game-start-screen, #game-over-screen, #howto-screen {
+    #character-select, #game-over-screen, #howto-screen, #room-screen {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 50, 0, 0.9); /* Dark green screens */
+      background: rgba(30, 58, 138, 0.9); /* Main color with transparency */
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -104,23 +113,54 @@
       padding: 20px;
       box-sizing: border-box;
     }
-    #character-select h1, #game-start-screen h1, #game-over-screen h1, #howto-screen h1 {
-      color: #00ffff; /* Light blue headings */
-      margin: 0;
-      font-size: 2em;
+    #unlock-confirmation {
+      position: absolute;
+      width: 300px;
+      height: 200px;
+      background: rgba(30, 58, 138, 0.95); /* Semi-transparent background */
+      border: 4px solid #1E40AF;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(30, 64, 175, 0.5);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 45; /* Above other screens */
+      padding: 15px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
-    #character-select p, #game-start-screen p, #game-over-screen p, #howto-screen p {
+    #character-select h1, #game-over-screen h1, #howto-screen h1, #room-screen h1, #unlock-confirmation h1 {
+      color: #ffffff; /* Base color for gradient fallback */
+      background: linear-gradient(to right, #FF0000, #FFFF00, #00FF00); /* Red to Yellow to Green */
+      -webkit-background-clip: text; /* For Webkit browsers */
+      background-clip: text;
+      -webkit-text-fill-color: transparent; /* Make text transparent to show gradient */
+      font-family: "Impact", "Haettenschweiler", "Arial Black", sans-serif; /* Stylish font stack */
+      font-size: 2em; /* Reset to original size for full screens, adjusted for pop-up separately */
+      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7); /* Bold shadow for depth */
+      margin: 0;
+    }
+    #unlock-confirmation h1 {
+      font-size: 1.5em; /* Adjusted for smaller pop-up */
+    }
+    #character-select p, #game-over-screen p, #howto-screen p, #room-screen p, #unlock-confirmation p {
       color: #ccc;
       margin: 8px 0;
+      font-size: 1em; /* Adjusted for readability */
     }
-    
     /* CHARACTER GRID */
-    #character-grid {
+    #character-grid, #room-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 15px;
       margin: 20px 0;
       max-width: 320px;
+    }
+    #room-grid {
+      height: 260px; /* Fixed height for 3 layers (3 * 80px + 2 * 15px gap = 270px, adjusted to 260px for padding) */
+      overflow-y: auto; /* Enable vertical scrolling for additional characters */
     }
     .char-option {
       width: 80px;
@@ -129,66 +169,108 @@
       background-repeat: no-repeat;
       background-position: center;
       cursor: pointer;
-      border: 4px solid transparent;
+      border: 6px solid transparent; /* Thicker border */
       border-radius: 12px;
       transition: all 0.2s;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3); /* Reduced shine */
+      position: relative;
       touch-action: manipulation;
     }
     .char-option.selected {
-      border-color: #00ff00; /* Green border when collected */
+      border-color: #1E40AF; /* Darker blue for selected */
       transform: scale(1.1);
-      box-shadow: 0 0 20px #00ff00; /* Green glow */
+      box-shadow: 0 0 10px #1E40AF; /* Subdued glow */
+    }
+    .char-option.locked {
+      filter: grayscale(100%);
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .char-option.locked::after {
+      content: "🔒";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2em;
+      z-index: 5;
+    }
+    .char-option.locked .cost {
+      position: absolute;
+      bottom: 10px; /* Adjusted for better visibility */
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.2em; /* Increased from 0.8em */
+      font-weight: bold; /* Added boldness */
+      color: #FFC107; /* Brighter gold */
+      text-shadow: 2px 2px 4px #000; /* Stronger shadow */
     }
     .char-option:active { transform: scale(1.05); }
-
     /* BIG PREVIEW */
-    #char-preview {
-      width: 120px;
-      height: 120px;
+    #char-preview, #room-preview, #unlock-preview {
+      width: 100px; /* Reduced size for pop-up */
+      height: 100px;
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      margin: 15px 0;
-      border: 3px solid #00ff00; /* Green border */
-      border-radius: 16px;
-      box-shadow: 0 0 25px #00ff00; /* Green glow */
+      margin: 10px 0;
+      border: 3px solid #1E40AF; /* Thinner border for pop-up */
+      border-radius: 8px;
+      box-shadow: 0 0 8px #1E40AF; /* Subdued glow */
       transition: all 0.3s;
     }
-
     #high-score-label { font-size: 1.2em; color: #FFD700; margin-bottom: 4px; } /* KEEP: Gold */
-    #new-record { color: #00ff00; font-weight: bold; margin-top: 8px; font-size: 1.1em; }
+    #new-record { color: #3B82F6; font-weight: bold; margin-top: 8px; font-size: 1.1em; } /* Light blue */
     #howto-screen { z-index: 35; }
     #howto-screen h1 { font-size: 1.8em; }
     #howto-screen p { font-size: 0.9em; }
-
+    #room-screen { z-index: 40; }
+    #room-screen .cost {
+      font-size: 1.2em;
+      color: #FFD700;
+      margin: 10px 0;
+    }
     button {
-      padding: 12px 24px;
-      font-size: 1.1em;
-      margin-top: 12px;
-      background: #0000ff; /* Blue buttons */
+      padding: 10px 20px; /* Slightly smaller for pop-up */
+      font-size: 1em;
+      margin: 5px;
+      background: #1E40AF; /* Darker blue for buttons */
       color: white;
-      border: 2px solid #00ff00; /* Green border */
-      border-radius: 8px;
+      border: 2px solid #1E40AF; /* Darker blue border */
+      border-radius: 6px;
       cursor: pointer;
       transition: 0.2s;
       touch-action: manipulation;
     }
     button:hover, button:active {
-      background: #000080; /* Darker blue on hover */
+      background: #1E3A8A; /* Main color for hover */
       transform: scale(1.05);
     }
     #mute-button {
       position: absolute;
       top: 8px;
       left: 8px;
-      background: #1e90ff; /* Brighter blue mute button */
-      border-color: #1e90ff;
+      background: #1E40AF; /* Darker blue for mute button */
+      border-color: #1E40AF; /* Darker blue border */
       z-index: 40;
       font-size: 0.9em;
       padding: 6px 10px;
     }
     .hidden { display: none !important; }
+    /* New Stats Styling */
+    #stats {
+      position: absolute;
+      top: 7px;
+      right: 10px;
+      text-align: right;
+      z-index: 40;
+    }
+    #stats div {
+      margin-bottom: 5px;
+      color: #FFD700; /* Gold for consistency */
+      font-size: 1.2em;
+      text-shadow: 2px 2px #000000; /* Black shadow for readability */
+    }
   </style>
 </head>
 <body>
@@ -197,27 +279,23 @@
     <div id="high-score">HIGH: 0</div>
     <div id="banana-score">BANANAS: 0</div>
     <div id="chump"></div>
+    <video id="rocket-video" preload="auto" muted="true" style="display: none; position: absolute; width: 50px; height: 50px; z-index: 11;">
+      <source src="" type="video/mp4">
+    </video>
 
     <!-- CHARACTER SELECT -->
     <div id="character-select">
-      <h1>Choose Your Chump!</h1>
+      <div id="stats">
+        <div id="high-score-display">HIGH: <span id="total-high-score">0</span></div>
+        <div id="banana-score-display">BANANAS: <span id="total-bananas">0</span></div>
+      </div>
+      <h1>Flappy CHUMP 🐒</h1>
       <div id="char-preview"></div> <!-- BIG PREVIEW HERE -->
       <p id="char-name">Classic Monkey</p>
-      <div id="character-grid">
-        <div class="char-option selected" data-id="monkey" style="background-image:url('https://i.postimg.cc/wMqvcgcM/IMG-1488-2.png')"></div>
-        <div class="char-option" data-id="banana" style="background-image:url('https://i.postimg.cc/X7NWJZqC/IMG-1486.png')"></div>
-        <div class="char-option" data-id="coconut" style="background-image:url('https://i.postimg.cc/7h6BvyPb/IMG-1487.png')"></div>
-      </div>
+      <div id="character-grid"></div> <!-- Now dynamic, shows all default chars -->
       <button id="play-button">PLAY!</button>
+      <button id="room-button">Room</button>
       <button id="howto-button">How to play</button>
-    </div>
-
-    <!-- START SCREEN -->
-    <div id="game-start-screen" class="hidden">
-      <h1>Flappy CHUMP</h1>
-      <p id="high-score-label">Best Score: <span id="start-high-score">0</span></p>
-      <p>Tap to flap!</p>
-      <button id="start-button">Start Game</button>
     </div>
 
     <!-- HOW TO -->
@@ -225,7 +303,8 @@
       <h1>How to Play</h1>
       <p>Click or tap to flap</p>
       <p>Pass through gaps to score</p>
-      <p>Avoid candles & collect 🍌!</p>
+      <p>Avoid candles & collect 🍌 to unlock new characters!</p>
+      <p>And more to come... 🐒</p>
       <button id="howto-close-button">Got it!</button>
     </div>
 
@@ -239,6 +318,25 @@
       <button id="play-again-button">Play Again</button>
     </div>
 
+    <!-- ROOM SCREEN -->
+    <div id="room-screen" class="hidden">
+      <h1>Chump Room</h1>
+      <div id="room-preview"></div> <!-- BIG PREVIEW HERE -->
+      <p id="room-name"></p>
+      <p id="room-banana-score">BANANAS: 0</p>
+      <div id="room-grid"></div>
+      <button id="room-back-button">Back</button>
+    </div>
+
+    <!-- UNLOCK CONFIRMATION -->
+    <div id="unlock-confirmation" class="hidden">
+      <h1>Unlock Character</h1>
+      <div id="unlock-preview"></div> <!-- BIG PREVIEW HERE -->
+      <p id="unlock-message"></p>
+      <button id="unlock-button">Unlock</button>
+      <button id="back-button">Back</button>
+    </div>
+
     <button id="mute-button">Speaker</button>
   </div>
 
@@ -249,49 +347,168 @@
     const scoreDisplay = document.getElementById('score');
     const highScoreDisplay = document.getElementById('high-score');
     const bananaScoreDisplay = document.getElementById('banana-score');
-    const startHighScore = document.getElementById('start-high-score');
     const charSelect = document.getElementById('character-select');
     const charGrid = document.getElementById('character-grid');
     const charName = document.getElementById('char-name');
-    const charPreview = document.getElementById('char-preview'); // NEW
+    const charPreview = document.getElementById('char-preview');
     const playButton = document.getElementById('play-button');
-    const startScreen = document.getElementById('game-start-screen');
+    const roomButton = document.getElementById('room-button');
     const gameOverScreen = document.getElementById('game-over-screen');
     const finalScoreDisplay = document.getElementById('final-score');
     const finalBananaScoreDisplay = document.getElementById('final-banana-score');
     const newRecordMsg = document.getElementById('new-record');
-    const startButton = document.getElementById('start-button');
     const goHomeButton = document.getElementById('go-home-button');
     const playAgainButton = document.getElementById('play-again-button');
     const muteButton = document.getElementById('mute-button');
     const howtoButton = document.getElementById('howto-button');
     const howtoScreen = document.getElementById('howto-screen');
     const howtoCloseButton = document.getElementById('howto-close-button');
+    const roomScreen = document.getElementById('room-screen');
+    const roomGrid = document.getElementById('room-grid');
+    const roomPreview = document.getElementById('room-preview');
+    const roomName = document.getElementById('room-name');
+    const roomBackButton = document.getElementById('room-back-button');
+    const roomBananaScore = document.getElementById('room-banana-score');
+    const unlockConfirmation = document.getElementById('unlock-confirmation');
+    const unlockPreview = document.getElementById('unlock-preview');
+    const unlockMessage = document.getElementById('unlock-message');
+    const unlockButton = document.getElementById('unlock-button');
+    const backButton = document.getElementById('back-button');
+    const totalHighScore = document.getElementById('total-high-score');
+    const totalBananas = document.getElementById('total-bananas');
 
     /* ---------- CHARACTER DATA ---------- */
-    const characters = {
-      monkey: { name: "Classic Monkey", url: 'https://i.postimg.cc/wMqvcgcM/IMG-1488-2.png' },
-      banana: { name: "Banana Bomber", url: 'https://i.postimg.cc/X7NWJZqC/IMG-1486.png' },
-      coconut: { name: "Coconut Crusher", url: 'https://i.postimg.cc/7h6BvyPb/IMG-1487.png' }
+    const defaultCharacters = {
+      monkey: { name: "Classic Monkey", url: 'https://i.postimg.cc/wMqvcgcM/IMG-1488-2.png', cost: 0, unlocked: true },
+      banana: { name: "Banana Bomber", url: 'https://i.postimg.cc/X7NWJZqC/IMG-1486.png', cost: 0, unlocked: true },
+      coconut: { name: "Coconut Crusher", url: 'https://i.postimg.cc/7h6BvyPb/IMG-1487.png', cost: 0, unlocked: true }
     };
 
+    const lockedCharacters = [
+      { name: "Cock chump", url: "https://i.postimg.cc/D0ybDcpg/ei-1762113350518-removebg-preview.png", cost: 100 },
+      { name: "Ketchup chump", url: "https://i.postimg.cc/VsJw9VR6/ei-1762114785428-removebg-preview.png", cost: 100 },
+      { name: "Hitman Chump", url: "https://i.postimg.cc/kg7cxkmh/ei-1762117358501-removebg-preview.png", cost: 100 },
+      { name: "pikachump", url: "https://files.catbox.moe/vx5x0m.png", cost: 100 },
+      { name: "New Chump 1", url: "https://files.catbox.moe/zl332r.png", cost: 100 },
+      { name: "New Chump 2", url: "https://files.catbox.moe/8vkirq.png", cost: 100 },
+      { name: "New Chump 3", url: "https://files.catbox.moe/s59m4b.png", cost: 100 },
+      { name: "New Chump 4", url: "https://files.catbox.moe/w4ux27.png", cost: 100 }
+    ];
+
     let selectedChar = localStorage.getItem('selectedFlappyChar') || 'monkey';
-    let currentCharUrl = characters[selectedChar].url;
+    let bananaScore = parseInt(localStorage.getItem('flappyMonkeyBananaScore')) || 0;
+    let previewedChar = null; // Track the last previewed character (locked or unlocked)
+
+    // Load unlocked states from localStorage or set defaults
+    Object.keys(defaultCharacters).forEach(char => {
+      defaultCharacters[char].unlocked = localStorage.getItem(`flappyCharUnlocked_${char}`) === 'true' || defaultCharacters[char].unlocked;
+    });
+    lockedCharacters.forEach((char, index) => {
+      char.unlocked = localStorage.getItem(`flappyCharUnlocked_locked_${index}`) === 'true' || char.unlocked || false;
+      if (!char.cost) char.cost = 50; // Default cost if not specified
+    });
+
+    // INITIALIZE CHARACTER GRID WITH ALL DEFAULT CHARACTERS
+    function updateCharacterGrid() {
+      charGrid.innerHTML = '';
+      const defaultCharIds = ['monkey', 'banana', 'coconut'];
+      defaultCharIds.forEach(charId => {
+        const char = defaultCharacters[charId];
+        const option = document.createElement('div');
+        option.className = `char-option ${selectedChar === charId ? 'selected' : ''}`;
+        option.dataset.id = charId;
+        option.style.backgroundImage = `url('${char.url}')`;
+        option.addEventListener('click', () => selectCharacter(option));
+        charGrid.appendChild(option);
+      });
+      updateCharacterPreview(selectedChar);
+    }
 
     // INITIAL PREVIEW
-    document.querySelector(`[data-id="${selectedChar}"]`).classList.add('selected');
-    charName.textContent = characters[selectedChar].name;
-    charPreview.style.backgroundImage = `url('${currentCharUrl}')`; // SHOW BIG
+    updateCharacterGrid();
+
+    function updateCharacterPreview(charId) {
+      const allCharacters = { ...defaultCharacters, ...Object.fromEntries(lockedCharacters.map(c => [c.name.toLowerCase(), c])) };
+      const char = allCharacters[charId] || allCharacters[charId.toLowerCase()];
+      if (char) {
+        charName.textContent = char.name;
+        charPreview.style.backgroundImage = `url('${char.url}')`;
+        chump.style.backgroundImage = `url('${char.url}')`; // Update chump in game
+        localStorage.setItem('selectedFlappyChar', charId);
+      }
+    }
 
     /* ---------- CHARACTER SELECTION ---------- */
     function selectCharacter(option) {
-      document.querySelectorAll('.char-option').forEach(el => el.classList.remove('selected'));
-      option.classList.add('selected');
-      selectedChar = option.dataset.id; // e.g., "monkey"
-      currentCharUrl = characters[selectedChar].url;
-      charName.textContent = characters[selectedChar].name;
-      charPreview.style.backgroundImage = `url('${currentCharUrl}')`; // UPDATE PREVIEW
-      localStorage.setItem('selectedFlappyChar', selectedChar);
+      const charId = option.dataset.id;
+      const allCharacters = { ...defaultCharacters, ...Object.fromEntries(lockedCharacters.map(c => [c.name.toLowerCase(), c])) };
+      const char = allCharacters[charId] || allCharacters[charId.toLowerCase()];
+      if (char) {
+        if (previewedChar === charId) {
+          if (char.unlocked) {
+            document.querySelectorAll('.char-option').forEach(el => el.classList.remove('selected'));
+            option.classList.add('selected');
+            selectedChar = charId;
+            updateCharacterPreview(charId);
+            previewedChar = null; // Reset preview after selection
+            // Stay in current screen (home or room)
+            if (roomScreen.classList.contains('hidden')) {
+              updateCharacterGrid(); // Refresh home grid if on home screen
+            } else {
+              roomPreview.style.backgroundImage = `url('${char.url}')`; // Update room preview
+              roomName.textContent = char.name; // Update room name
+            }
+          } else {
+            showUnlockConfirmation(char);
+          }
+        } else {
+          previewedChar = charId;
+          if (roomScreen.classList.contains('hidden')) {
+            charPreview.style.backgroundImage = `url('${char.url}')`;
+            charName.textContent = char.name;
+          } else {
+            roomPreview.style.backgroundImage = `url('${char.url}')`;
+            roomName.textContent = char.name;
+          }
+        }
+      }
+    }
+
+    function showUnlockScreen(char) {
+      roomPreview.style.backgroundImage = `url('${char.url}')`;
+      roomName.textContent = char.name;
+      roomBananaScore.textContent = `BANANAS: ${bananaScore}`; // Update banana score in room
+      roomScreen.classList.remove('hidden');
+    }
+
+    function updateRoomGrid() {
+      roomGrid.innerHTML = '';
+      const allCharacters = { ...defaultCharacters, ...Object.fromEntries(lockedCharacters.map(c => [c.name.toLowerCase(), c])) };
+      const characterArray = Object.entries(allCharacters).slice(0, 9); // Limit to 9 characters
+      characterArray.forEach(([id, char]) => {
+        const option = document.createElement('div');
+        option.className = `char-option ${!char.unlocked ? 'locked' : ''} ${selectedChar === id ? 'selected' : ''}`;
+        option.dataset.id = id;
+        option.style.backgroundImage = `url('${char.url}')`;
+        if (!char.unlocked) {
+          option.innerHTML = `<span class="cost">${char.cost} 🍌</span>`;
+        }
+        option.addEventListener('click', () => selectCharacter(option));
+        roomGrid.appendChild(option);
+      });
+      // Add the 10th character if it exists
+      if (Object.entries(allCharacters).length > 9) {
+        const extraChar = Object.entries(allCharacters)[9];
+        const option = document.createElement('div');
+        option.className = `char-option ${!extraChar[1].unlocked ? 'locked' : ''} ${selectedChar === extraChar[0] ? 'selected' : ''}`;
+        option.dataset.id = extraChar[0];
+        option.style.backgroundImage = `url('${extraChar[1].url}')`;
+        if (!extraChar[1].unlocked) {
+          option.innerHTML = `<span class="cost">${extraChar[1].cost} 🍌</span>`;
+        }
+        option.addEventListener('click', () => selectCharacter(option));
+        roomGrid.appendChild(option);
+      }
     }
 
     charGrid.addEventListener('click', (e) => {
@@ -305,23 +522,45 @@
       if (option) selectCharacter(option);
     }, { passive: false });
 
-    playButton.addEventListener('click', () => {
-      chump.style.backgroundImage = `url('${currentCharUrl}')`;
+    playButton.addEventListener('click', startNewGame);
+    playAgainButton.addEventListener('click', startNewGame); // Sync with "PLAY!"
+
+    function startNewGame() {
       charSelect.classList.add('hidden');
-      startScreen.classList.remove('hidden');
+      gameOverScreen.classList.add('hidden'); // Ensure game-over screen is hidden for both
+      resetGame();
+      // Start game loop and spawning only on first tap
+      muteButton.classList.add('hidden'); // Hide mute button
+    }
+
+    roomButton.addEventListener('click', () => {
+      updateRoomGrid();
+      roomBananaScore.textContent = `BANANAS: ${bananaScore}`; // Update banana score when entering room
+      charSelect.classList.add('hidden');
+      roomScreen.classList.remove('hidden');
+      muteButton.classList.add('hidden'); // Hide mute button
+      previewedChar = null; // Reset preview when entering room
+    });
+
+    roomBackButton.addEventListener('click', () => {
+      updateCharacterGrid(); // Refresh charGrid with all default chars
+      roomScreen.classList.add('hidden');
+      charSelect.classList.remove('hidden');
+      muteButton.classList.remove('hidden'); // Show mute button
+      previewedChar = null; // Reset preview when leaving room
     });
 
     /* ---------- HIGH SCORES ---------- */
     let highScore = parseInt(localStorage.getItem('flappyMonkeyHighScore')) || 0;
     highScoreDisplay.textContent = `HIGH: ${highScore}`;
-    startHighScore.textContent = highScore;
+    totalHighScore.textContent = highScore; // Initialize home screen high score
 
     function saveHighScores() {
       if (score > highScore) {
         highScore = score;
         localStorage.setItem('flappyMonkeyHighScore', highScore);
         highScoreDisplay.textContent = `HIGH: ${highScore}`;
-        startHighScore.textContent = highScore;
+        totalHighScore.textContent = highScore; // Update home screen
         newRecordMsg.classList.remove('hidden');
       } else {
         newRecordMsg.classList.add('hidden');
@@ -331,19 +570,20 @@
     /* ---------- GAME CONSTANTS ---------- */
     const BASE_OBSTACLE_SPEED = 1.5;
     const BASE_SPAWN_RATE = 2500;
-    const SPEED_INCREASE_PER_5 = 0.3;
+    const SPEED_INCREASE_PER_5 = 0.23; // Reduced speed increase for smoother progression
     const SPAWN_RATE_DECREASE_PER_5 = 200;
-    const GRAVITY = 0.4;
-    const JUMP_STRENGTH = -7.5;
+    const GRAVITY = 0.37; // Adjusted for smoother fall
+    const JUMP_STRENGTH = -7.5; // Adjusted for stronger jump
     const GAP_SIZE = 200;
-    const HITBOX_BUFFER = 5;
+    const HITBOX_BUFFER = 10; // Increased buffer to improve collision detection
     const GAME_WIDTH = 400; /* Updated width */
     const GAME_HEIGHT = 700; /* Updated height */
     const CHUMP_SIZE = 50;
     const OBSTACLE_WIDTH = 40;
     const CHUMP_X = 100; /* Adjusted for new width */
     const BANANA_SIZE = 30;
-    const BANANA_SPAWN_CHANCE = 0.3; // 30% chance as per your tweak
+    const BANANA_SPAWN_CHANCE = 0.45; // 30% chance
+    const MAX_OBSTACLE_SPEED = 5; // Cap maximum speed
 
     /* ---------- DYNAMIC STATE ---------- */
     let gameLoopId = null;
@@ -353,14 +593,13 @@
     let obstacles = [];
     let bananas = [];
     let score = 0;
-    let bananaScore = parseInt(localStorage.getItem('flappyMonkeyBananaScore')) || 0; // Load persistent total
     let isGameOver = true;
     let isMuted = false;
     let gameStarted = false;
     let audioUnlocked = false;
     let currentObstacleSpeed = BASE_OBSTACLE_SPEED;
     let currentSpawnRate = BASE_SPAWN_RATE;
-    let awaitingFirstTap = false; // Flag for "Play Again" state
+    let awaitingFirstTap = true; // Flag for first tap to start
 
     /* ---------- AUDIO: TRUE RANDOM + DING ---------- */
     const bgmUrls = [
@@ -371,22 +610,19 @@
 
     const bgm1 = new Audio(bgmUrls[0]);
     bgm1.loop = true;
-    bgm1.volume = 0.4;
+    bgm1.volume = 0.3;
     const bgm2 = new Audio(bgmUrls[1]);
     bgm2.loop = true;
-    bgm2.volume = 0.4;
+    bgm2.volume = 0.3;
     const bgm3 = new Audio(bgmUrls[2]);
     bgm3.loop = true;
-    bgm3.volume = 0.4;
+    bgm3.volume = 0.3;
     const bgmList = [bgm1, bgm2, bgm3];
 
     let currentBGM = null;
 
-    const scoreSound = new Audio('will add later ');
-    scoreSound.volume = 0.4;
-    scoreSound.preload = 'auto';
-    const bananaSound = new Audio('https://files.catbox.moe/pev2v4.wav'); // Simple collect sound
-    bananaSound.volume = 0.4;
+    const bananaSound = new Audio('https://files.catbox.moe/pev2v4.wav'); // Replaced sound
+    bananaSound.volume = 0.23;
     bananaSound.preload = 'auto';
 
     function stopBGM() {
@@ -403,13 +639,6 @@
       const randomIndex = Math.floor(Math.random() * bgmList.length);
       currentBGM = bgmList[randomIndex];
       currentBGM.play().catch(() => {});
-    }
-
-    function playScoreSound() {
-      if (!isMuted && audioUnlocked) {
-        scoreSound.currentTime = 0;
-        scoreSound.play().catch(() => {});
-      }
     }
 
     function playBananaSound() {
@@ -436,8 +665,8 @@
 
     /* ---------- DIFFICULTY ---------- */
     function increaseDifficulty() {
-      if (score > 0 && score % 5 === 0 && gameStarted && !isGameOver) {
-        currentObstacleSpeed += SPEED_INCREASE_PER_5;
+      if (score > 0 && score % 3 === 0 && gameStarted && !isGameOver) {
+        currentObstacleSpeed = Math.min(MAX_OBSTACLE_SPEED, currentObstacleSpeed + SPEED_INCREASE_PER_5); // Cap speed
         const newRate = Math.max(1200, currentSpawnRate - SPAWN_RATE_DECREASE_PER_5);
         if (newRate !== currentSpawnRate) {
           currentSpawnRate = newRate;
@@ -450,6 +679,8 @@
     function updateScore() {
       scoreDisplay.textContent = score;
       bananaScoreDisplay.textContent = `BANANAS: ${bananaScore}`;
+      totalHighScore.textContent = highScore; // Update home screen high score
+      totalBananas.textContent = bananaScore; // Update home screen banana score
       increaseDifficulty();
     }
 
@@ -473,19 +704,17 @@
       isGameOver = false;
       gameStarted = false;
       score = 0; // Reset score, but keep bananaScore
-      currentObstacleSpeed = BASE_OBSTACLE_SPEED;
-      currentSpawnRate = BASE_SPAWN_RATE;
+      currentObstacleSpeed = BASE_OBSTACLE_SPEED; // Ensure speed resets
+      currentSpawnRate = BASE_SPAWN_RATE; // Ensure spawn rate resets
       chumpY = GAME_HEIGHT / 2;
       chumpVelocity = 0;
       updateScore();
       resetObstacles();
       resetBananas();
-      startScreen.classList.add('hidden');
-      gameOverScreen.classList.add('hidden');
       chump.style.display = 'block';
       chump.style.top = `${chumpY}px`;
       newRecordMsg.classList.add('hidden');
-      awaitingFirstTap = true; // Set flag after reset
+      awaitingFirstTap = true; // Wait for first tap to start
     }
 
     function endGame() {
@@ -498,10 +727,16 @@
       finalScoreDisplay.textContent = `Your Score: ${score}`;
       finalBananaScoreDisplay.textContent = `Bananas Collected: ${bananaScore}`;
       saveHighScores();
-      // Save bananaScore to localStorage
+      // Save bananaScore and unlocked states to localStorage
       localStorage.setItem('flappyMonkeyBananaScore', bananaScore);
+      Object.keys(defaultCharacters).forEach(char => {
+        localStorage.setItem(`flappyCharUnlocked_${char}`, defaultCharacters[char].unlocked);
+      });
+      lockedCharacters.forEach((char, index) => {
+        localStorage.setItem(`flappyCharUnlocked_locked_${index}`, char.unlocked);
+      });
       gameOverScreen.classList.remove('hidden');
-      gameStarted = false;
+      muteButton.classList.add('hidden'); // Hide mute button
     }
 
     function flap() {
@@ -510,17 +745,17 @@
       if (awaitingFirstTap) {
         awaitingFirstTap = false;
         gameStarted = true;
-        playRandomBGM();
         gameLoopId = requestAnimationFrame(updateGame);
         obstacleSpawnId = setInterval(createObstacle, currentSpawnRate);
+        playRandomBGM();
       }
-      chumpVelocity = JUMP_STRENGTH; // Always apply jump strength
+      chumpVelocity = JUMP_STRENGTH;
       chump.style.transform = 'rotate(-15deg)';
     }
 
     function createObstacle() {
       const minHeight = 50;
-      const maxTopHeight = GAME_HEIGHT - minHeight - GAP_SIZE;
+      const maxTopHeight = GAME_HEIGHT - (2 * minHeight) - GAP_SIZE; // Ensure minimum space at top and bottom
       const topHeight = Math.floor(Math.random() * (maxTopHeight - minHeight + 1)) + minHeight;
       const bottomHeight = GAME_HEIGHT - topHeight - GAP_SIZE;
       const obstacleX = GAME_WIDTH; // Start at right edge
@@ -528,12 +763,14 @@
       const topPipe = document.createElement('div');
       topPipe.className = 'obstacle top';
       topPipe.style.height = `${topHeight}px`;
+      topPipe.style.width = `${OBSTACLE_WIDTH}px`; // Explicit width
       topPipe.style.left = `${obstacleX}px`;
       gameBoard.appendChild(topPipe);
 
       const bottomPipe = document.createElement('div');
       bottomPipe.className = 'obstacle bottom';
       bottomPipe.style.height = `${bottomHeight}px`;
+      bottomPipe.style.width = `${OBSTACLE_WIDTH}px`; // Explicit width
       bottomPipe.style.left = `${obstacleX}px`;
       gameBoard.appendChild(bottomPipe);
 
@@ -544,10 +781,8 @@
         passed: false
       });
 
-      // Random chance to spawn banana
       if (Math.random() < BANANA_SPAWN_CHANCE) {
         createBanana(obstacleX, topHeight);
-        console.log("Banana spawned at x:", obstacleX, "y:", topHeight + (GAP_SIZE / 2) - (BANANA_SIZE / 2));
       }
     }
 
@@ -579,7 +814,6 @@
           score++;
           updateScore();
           obs.passed = true;
-          playScoreSound();
         }
 
         if (obs.x < -OBSTACLE_WIDTH) {
@@ -597,7 +831,6 @@
         banana.x -= currentObstacleSpeed;
         banana.element.style.left = `${banana.x}px`;
 
-        // Check collision with chump
         const chumpTop = chumpY;
         const chumpBottom = chumpY + CHUMP_SIZE;
         const bananaTop = banana.y;
@@ -606,10 +839,9 @@
             chumpBottom > bananaTop && chumpTop < bananaBottom) {
           banana.element.remove();
           bananas.splice(i, 1);
-          bananaScore++; // Increment total bananas
+          bananaScore++;
           updateScore();
           playBananaSound();
-          console.log("Banana collected, total now:", bananaScore);
         }
 
         if (banana.x < -BANANA_SIZE) {
@@ -648,24 +880,66 @@
       gameLoopId = requestAnimationFrame(updateGame);
     }
 
+    /* ---------- UNLOCK LOGIC ---------- */
+    let selectedCharToUnlock = null;
+
+    function showUnlockConfirmation(char) {
+      selectedCharToUnlock = char;
+      unlockPreview.style.backgroundImage = `url('${char.url}')`;
+      unlockMessage.textContent = `Unlock for ${char.cost} bananas?`;
+      unlockConfirmation.classList.remove('hidden');
+    }
+
+    function performUnlock() {
+      if (bananaScore >= selectedCharToUnlock.cost) {
+        bananaScore -= selectedCharToUnlock.cost;
+        selectedCharToUnlock.unlocked = true;
+        updateScore();
+        roomBananaScore.textContent = `BANANAS: ${bananaScore}`; // Update room banana score
+        const index = lockedCharacters.findIndex(c => c.name.toLowerCase() === selectedCharToUnlock.name.toLowerCase());
+        localStorage.setItem(`flappyCharUnlocked_locked_${index}`, 'true');
+        updateRoomGrid(); // Refresh room grid to reflect unlocked status
+        unlockConfirmation.classList.add('hidden');
+        previewedChar = null; // Reset preview after unlock
+      } else {
+        unlockMessage.textContent = "Not enough bananas!";
+      }
+    }
+
+    roomScreen.addEventListener('click', (e) => {
+      const option = e.target.closest('.char-option');
+      if (option) {
+        const charName = option.dataset.id;
+        const char = lockedCharacters.find(c => c.name.toLowerCase() === charName.toLowerCase()) || defaultCharacters[charName];
+        if (char) selectCharacter(option); // Handle both locked and unlocked via selectCharacter
+      }
+    });
+
+    unlockButton.addEventListener('click', () => {
+      performUnlock();
+    });
+
+    backButton.addEventListener('click', () => {
+      unlockMessage.textContent = `Unlock for ${selectedCharToUnlock.cost} bananas?`; // Reset message
+      unlockConfirmation.classList.add('hidden');
+    });
+
     /* ---------- EVENT LISTENERS ---------- */
-    startButton.addEventListener('click', resetGame);
     goHomeButton.addEventListener('click', () => {
+      updateCharacterGrid(); // Refresh charGrid with all default chars
       gameOverScreen.classList.add('hidden');
       charSelect.classList.remove('hidden');
-    });
-    playAgainButton.addEventListener('click', () => {
-      gameOverScreen.classList.add('hidden');
-      resetGame();
-      // Game starts on first tap, so no immediate start here
+      muteButton.classList.remove('hidden'); // Show mute button
     });
     howtoButton.addEventListener('click', () => howtoScreen.classList.remove('hidden'));
     howtoCloseButton.addEventListener('click', () => howtoScreen.classList.add('hidden'));
     muteButton.addEventListener('click', () => {
-      isMuted = !isMuted;
-      muteButton.textContent = isMuted ? 'Muted' : 'Speaker';
-      if (isMuted && currentBGM) currentBGM.pause();
-      else if (currentBGM && gameStarted) currentBGM.play().catch(() => {});
+      if (!muteButton.classList.contains('hidden')) { // Only toggle if visible
+        isMuted = !isMuted;
+        muteButton.textContent = isMuted ? 'Muted' : 'Speaker';
+        if (isMuted && currentBGM) currentBGM.pause();
+        else if (currentBGM && gameStarted) currentBGM.play().catch(() => {});
+      }
     });
 
     gameBoard.addEventListener('click', (e) => {
@@ -681,10 +955,17 @@
 
     document.addEventListener('keydown', e => {
       if (e.code === 'Space') { e.preventDefault(); flap(); }
-      else if (e.key.toLowerCase() === 'm') { isMuted = !isMuted; muteButton.textContent = isMuted ? 'Muted' : 'Speaker'; }
+      else if (e.key.toLowerCase() === 'm') {
+        if (!muteButton.classList.contains('hidden')) { // Only toggle if visible
+          isMuted = !isMuted;
+          muteButton.textContent = isMuted ? 'Muted' : 'Speaker';
+          if (isMuted && currentBGM) currentBGM.pause();
+          else if (currentBGM && gameStarted) currentBGM.play().catch(() => {});
+        }
+      }
     });
 
     updateScore();
   </script>
 </body>
-</html> 
+</html>

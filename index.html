@@ -4,53 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Flappy CHUMP</title>
-  <script type="module">
-    // Import the functions you need from the SDKs you need
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, getDocs, query, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-
-    // Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyC4O1Ll7XPCP3VpweybYd90MX9-thsdfiA",
-      authDomain: "flappy-chump.firebaseapp.com",
-      projectId: "flappy-chump",
-      storageBucket: "flappy-chump.firebasestorage.app",
-      messagingSenderId: "734379304815",
-      appId: "1:734379304815:web:11f9a48e8c2e9713c72a9a"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    console.log("Firestore initialized:", db);
-
-    // UUID generation function
-    function generateUUID() {
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      });
-    }
-
-    // Initialize player data
-    let uuid = localStorage.getItem('flappyChumpUUID') || generateUUID();
-    let displayName = localStorage.getItem('flappyChumpDisplayName');
-    let highScore = parseInt(localStorage.getItem('flappyMonkeyHighScore')) || 0;
-    let bananaScore = parseInt(localStorage.getItem('flappyMonkeyBananaScore')) || 0;
-
-    if (!displayName) {
-      let nameInput;
-      do {
-        nameInput = prompt("Enter your display name (min 4 characters):");
-        if (!nameInput) nameInput = `Anonymous_${uuid.slice(0, 8)}`;
-      } while (nameInput.length < 4);
-      displayName = nameInput;
-      localStorage.setItem('flappyChumpDisplayName', displayName);
-    }
-    localStorage.setItem('flappyChumpUUID', uuid);
-  </script>
   <style>
-    /* [Your existing CSS remains unchanged] */
     body {
       display: flex;
       justify-content: center;
@@ -280,17 +234,23 @@
       z-index: 45;
     }
     #leaderboard-list {
-      max-height: 400px;
+      max-height: 450px; /* Fits ~10 entries with bigger text */
       overflow-y: auto;
       width: 100%;
     }
     .leaderboard-entry {
       display: flex;
-      flex-direction: column;
+      align-items: center;
       padding: 10px;
       margin: 5px 0;
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.2); /* Readable background */
       border-radius: 5px;
+    }
+    .leaderboard-entry span::before {
+      content: attr(data-rank) ". ";
+      margin-right: 10px;
+      font-weight: bold;
+      color: #FFD700; /* Gold ranks */
     }
     button {
       padding: 10px 20px;
@@ -332,6 +292,17 @@
       font-size: 1.2em;
       text-shadow: 2px 2px #000000;
     }
+    /* New Username Box Styling */
+    #username-display {
+      position: absolute;
+      top: 10px; /* Below banana-score-display */
+      width: 60%;
+      text-align: center;
+      font-size: 1.2em;
+      color:#f93d3d80;
+      text-shadow: 2px 2px #000000;
+      z-index: 15;
+    }
   </style>
 </head>
 <body>
@@ -354,6 +325,7 @@
       <div id="char-preview"></div>
       <p id="char-name">Classic Monkey</p>
       <div id="character-grid"></div>
+      <div id="username-display"></div> <!-- New username box -->
       <button id="play-button">PLAY!</button>
       <button id="room-button">Room</button>
       <button id="howto-button">How to play</button>
@@ -533,10 +505,14 @@
     const backButton = document.getElementById('back-button');
     const totalHighScore = document.getElementById('total-high-score');
     const totalBananas = document.getElementById('total-bananas');
+    const usernameDisplay = document.getElementById('username-display'); // New element
     const leaderboardScreen = document.getElementById('leaderboard-screen');
     const leaderboardList = document.getElementById('leaderboard-list');
     const leaderboardBackButton = document.getElementById('leaderboard-back-button');
     const leaderboardButton = document.getElementById('leaderboard-button');
+
+    // Update username display on load
+    usernameDisplay.textContent = `USER: ${displayName}`;
 
     /* ---------- CHARACTER DATA ---------- */
     const defaultCharacters = {
@@ -547,13 +523,13 @@
 
     const lockedCharacters = [
       { name: "Cock chump", url: "https://i.postimg.cc/D0ybDcpg/ei-1762113350518-removebg-preview.png", cost: 100 },
-      { name: "Ketchup chump", url: "https://i.postimg.cc/VsJw9VR6/ei-1762114785428-removebg-preview.png", cost: 100 },
+      { name: "Ketchup chump", url: "https://i.postimg.cc/VsJw9VR6/ei-1762114785428-removebg-preview.png", cost: 80 },
       { name: "Hitman Chump", url: "https://i.postimg.cc/kg7cxkmh/ei-1762117358501-removebg-preview.png", cost: 100 },
       { name: "pikachump", url: "https://files.catbox.moe/vx5x0m.png", cost: 100 },
       { name: "New Chump 1", url: "https://files.catbox.moe/zl332r.png", cost: 100 },
-      { name: "New Chump 2", url: "https://files.catbox.moe/8vkirq.png", cost: 100 },
+      { name: "New Chump 2", url: "https://files.catbox.moe/8vkirq.png", cost: 26 },
       { name: "New Chump 3", url: "https://files.catbox.moe/s59m4b.png", cost: 100 },
-      { name: "New Chump 4", url: "https://files.catbox.moe/w4ux27.png", cost: 100 }
+      { name: "New Chump 4", url: "https://files.catbox.moe/w4ux27.png", cost: 54 }
     ];
 
     let selectedChar = localStorage.getItem('selectedFlappyChar') || 'monkey';
@@ -826,6 +802,7 @@
       bananaScoreDisplay.textContent = `BANANAS: ${bananaScore}`;
       totalHighScore.textContent = highScore;
       totalBananas.textContent = bananaScore;
+      usernameDisplay.textContent = `USER: ${displayName}`; // Update username on score change
       increaseDifficulty();
     }
 
@@ -1131,17 +1108,25 @@
       console.log("Setting up leaderboard listener...");
       onSnapshot(leaderboardRef, (snapshot) => {
         leaderboardList.innerHTML = '';
+        // Collect and sort entries by highScore descending
+        const entries = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
-          const entry = document.createElement('div');
-          entry.className = 'leaderboard-entry';
-          entry.innerHTML = `<span>${data.displayName}: High ${data.highScore}, Bananas ${data.bananaScore}</span>`;
-          leaderboardList.appendChild(entry);
+          entries.push({ id: doc.id, ...data });
         });
-        console.log("Leaderboard updated with", snapshot.size, "entries");
+        entries.sort((a, b) => b.highScore - a.highScore); // Sort by highScore, highest first
+        // Limit to top 20, display with black bold names and white bold stats
+        const top20 = entries.slice(0, 20); // Load only top 20
+        top20.forEach((entry, index) => {
+          const entryDiv = document.createElement('div');
+          entryDiv.className = 'leaderboard-entry';
+          entryDiv.innerHTML = `<span data-rank="${index + 1}"><strong style="font-size: 1.3em; font-weight: bold; color: black;">${entry.displayName}</strong>: <span style="color: white; font-weight: bold;">High ${entry.highScore}, Bananas ${entry.bananaScore}</span></span>`;
+          leaderboardList.appendChild(entryDiv);
+        });
+        console.log("Leaderboard updated with up to 20 entries, showing top 10 with scroll");
       }, (error) => {
         console.error("Leaderboard listener error: ", error);
-        setTimeout(() => loadLeaderboard(), 2000); // Retry after 2 seconds
+        setTimeout(() => loadLeaderboard(), 2000); // Retry on error
       });
     }
 

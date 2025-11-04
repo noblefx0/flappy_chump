@@ -4,24 +4,70 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Flappy CHUMP</title>
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, getDocs, query, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4O1Ll7XPCP3VpweybYd90MX9-thsdfiA",
+      authDomain: "flappy-chump.firebaseapp.com",
+      projectId: "flappy-chump",
+      storageBucket: "flappy-chump.firebasestorage.app",
+      messagingSenderId: "734379304815",
+      appId: "1:734379304815:web:11f9a48e8c2e9713c72a9a"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    console.log("Firestore initialized:", db);
+
+    // UUID generation function
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // Initialize player data
+    let uuid = localStorage.getItem('flappyChumpUUID') || generateUUID();
+    let displayName = localStorage.getItem('flappyChumpDisplayName');
+    let highScore = parseInt(localStorage.getItem('flappyMonkeyHighScore')) || 0;
+    let bananaScore = parseInt(localStorage.getItem('flappyMonkeyBananaScore')) || 0;
+
+    if (!displayName) {
+      let nameInput;
+      do {
+        nameInput = prompt("Enter your display name (min 4 characters):");
+        if (!nameInput) nameInput = `Anonymous_${uuid.slice(0, 8)}`;
+      } while (nameInput.length < 4);
+      displayName = nameInput;
+      localStorage.setItem('flappyChumpDisplayName', displayName);
+    }
+    localStorage.setItem('flappyChumpUUID', uuid);
+  </script>
   <style>
+    /* [Your existing CSS remains unchanged] */
     body {
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
       margin: 0;
-      background: #1E3A8A; /* New main color: deep bold blue */
+      background: #1E3A8A;
       font-family: Arial, sans-serif;
       overflow: hidden;
     }
     #game-board {
-      width: 400px; /* Updated width */
-      height: 700px; /* Updated height */
+      width: 400px;
+      height: 700px;
       position: relative;
       overflow: hidden;
-      border: 6px solid #1E40AF; /* Darker blue, thicker border */
-      box-shadow: 0 0 10px rgba(30, 64, 175, 0.3); /* Subdued shadow */
+      border: 6px solid #1E40AF;
+      box-shadow: 0 0 10px rgba(30, 64, 175, 0.3);
       touch-action: none;
       user-select: none;
       background: url('https://i.pinimg.com/736x/4e/8e/c3/4e8ec376a1f587c358739ef3c233f253.jpg') center/cover no-repeat;
@@ -31,8 +77,8 @@
       position: absolute;
       width: 50px;
       height: 50px;
-      left: 100px; /* Adjusted for new width */
-      top: 325px; /* Adjusted for new height */
+      left: 100px;
+      top: 325px;
       background-size: contain;
       background-repeat: no-repeat;
       z-index: 10;
@@ -48,11 +94,11 @@
     .obstacle {
       position: absolute;
       width: 40px;
-      height: auto; /* Allow height to adjust based on style */
-      background-color: #cc0000; /* KEEP: Red candles */
-      border: 1px solid #660000; /* KEEP: Dark red border */
+      height: auto;
+      background-color: #cc0000;
+      border: 1px solid #660000;
       z-index: 5;
-      box-sizing: border-box; /* Ensure border is included in width/height */
+      box-sizing: border-box;
     }
     .obstacle.top { top: 0; border-bottom: 5px solid #660000; }
     .obstacle.bottom { bottom: 0; border-top: 5px solid #660000; }
@@ -62,8 +108,8 @@
       width: 100%;
       text-align: center;
       font-size: 3em;
-      color: #3B82F6; /* Light blue for text */
-      text-shadow: 2px 2px #1E3A8A; /* Match main color for shadow */
+      color: #3B82F6;
+      text-shadow: 2px 2px #1E3A8A;
       z-index: 20;
     }
     #high-score {
@@ -72,8 +118,8 @@
       width: 100%;
       text-align: center;
       font-size: 1.5em;
-      color: #FFD700; /* KEEP: Gold high score */
-      text-shadow: 2px 2px #000000; /* Black shadow */
+      color: #FFD700;
+      text-shadow: 2px 2px #000000;
       z-index: 20;
     }
     #banana-score {
@@ -82,8 +128,8 @@
       width: 100%;
       text-align: center;
       font-size: 1.5em;
-      color: #FFD700; /* Gold for banana score */
-      text-shadow: 2px 2px #000000; /* Black shadow */
+      color: #FFD700;
+      text-shadow: 2px 2px #000000;
       z-index: 20;
     }
     .banana {
@@ -93,16 +139,16 @@
       font-size: 30px;
       text-align: center;
       line-height: 30px;
-      z-index: 15; /* Ensure visibility */
+      z-index: 15;
     }
     /* SCREENS */
-    #character-select, #game-over-screen, #howto-screen, #room-screen {
+    #character-select, #game-over-screen, #howto-screen, #room-screen, #leaderboard-screen {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(30, 58, 138, 0.9); /* Main color with transparency */
+      background: rgba(30, 58, 138, 0.9);
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -117,7 +163,7 @@
       position: absolute;
       width: 300px;
       height: 200px;
-      background: rgba(30, 58, 138, 0.95); /* Semi-transparent background */
+      background: rgba(30, 58, 138, 0.95);
       border: 4px solid #1E40AF;
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(30, 64, 175, 0.5);
@@ -125,30 +171,30 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 45; /* Above other screens */
+      z-index: 45;
       padding: 15px;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
     }
-    #character-select h1, #game-over-screen h1, #howto-screen h1, #room-screen h1, #unlock-confirmation h1 {
-      color: #ffffff; /* Base color for gradient fallback */
-      background: linear-gradient(to right, #FF0000, #FFFF00, #00FF00); /* Red to Yellow to Green */
-      -webkit-background-clip: text; /* For Webkit browsers */
+    #character-select h1, #game-over-screen h1, #howto-screen h1, #room-screen h1, #leaderboard-screen h1, #unlock-confirmation h1 {
+      color: #ffffff;
+      background: linear-gradient(to right, #FF0000, #FFFF00, #00FF00);
+      -webkit-background-clip: text;
       background-clip: text;
-      -webkit-text-fill-color: transparent; /* Make text transparent to show gradient */
-      font-family: "Impact", "Haettenschweiler", "Arial Black", sans-serif; /* Stylish font stack */
-      font-size: 2em; /* Reset to original size for full screens, adjusted for pop-up separately */
-      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7); /* Bold shadow for depth */
+      -webkit-text-fill-color: transparent;
+      font-family: "Impact", "Haettenschweiler", "Arial Black", sans-serif;
+      font-size: 2em;
+      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
       margin: 0;
     }
     #unlock-confirmation h1 {
-      font-size: 1.5em; /* Adjusted for smaller pop-up */
+      font-size: 1.5em;
     }
-    #character-select p, #game-over-screen p, #howto-screen p, #room-screen p, #unlock-confirmation p {
+    #character-select p, #game-over-screen p, #howto-screen p, #room-screen p, #leaderboard-screen p, #unlock-confirmation p {
       color: #ccc;
       margin: 8px 0;
-      font-size: 1em; /* Adjusted for readability */
+      font-size: 1em;
     }
     /* CHARACTER GRID */
     #character-grid, #room-grid {
@@ -159,8 +205,8 @@
       max-width: 320px;
     }
     #room-grid {
-      height: 260px; /* Fixed height for 3 layers (3 * 80px + 2 * 15px gap = 270px, adjusted to 260px for padding) */
-      overflow-y: auto; /* Enable vertical scrolling for additional characters */
+      height: 260px;
+      overflow-y: auto;
     }
     .char-option {
       width: 80px;
@@ -169,17 +215,17 @@
       background-repeat: no-repeat;
       background-position: center;
       cursor: pointer;
-      border: 6px solid transparent; /* Thicker border */
+      border: 6px solid transparent;
       border-radius: 12px;
       transition: all 0.2s;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3); /* Reduced shine */
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
       position: relative;
       touch-action: manipulation;
     }
     .char-option.selected {
-      border-color: #1E40AF; /* Darker blue for selected */
+      border-color: #1E40AF;
       transform: scale(1.1);
-      box-shadow: 0 0 10px #1E40AF; /* Subdued glow */
+      box-shadow: 0 0 10px #1E40AF;
     }
     .char-option.locked {
       filter: grayscale(100%);
@@ -197,30 +243,30 @@
     }
     .char-option.locked .cost {
       position: absolute;
-      bottom: 10px; /* Adjusted for better visibility */
+      bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 1.2em; /* Increased from 0.8em */
-      font-weight: bold; /* Added boldness */
-      color: #FFC107; /* Brighter gold */
-      text-shadow: 2px 2px 4px #000; /* Stronger shadow */
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #FFC107;
+      text-shadow: 2px 2px 4px #000;
     }
     .char-option:active { transform: scale(1.05); }
     /* BIG PREVIEW */
     #char-preview, #room-preview, #unlock-preview {
-      width: 100px; /* Reduced size for pop-up */
+      width: 100px;
       height: 100px;
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
       margin: 10px 0;
-      border: 3px solid #1E40AF; /* Thinner border for pop-up */
+      border: 3px solid #1E40AF;
       border-radius: 8px;
-      box-shadow: 0 0 8px #1E40AF; /* Subdued glow */
+      box-shadow: 0 0 8px #1E40AF;
       transition: all 0.3s;
     }
-    #high-score-label { font-size: 1.2em; color: #FFD700; margin-bottom: 4px; } /* KEEP: Gold */
-    #new-record { color: #3B82F6; font-weight: bold; margin-top: 8px; font-size: 1.1em; } /* Light blue */
+    #high-score-label { font-size: 1.2em; color: #FFD700; margin-bottom: 4px; }
+    #new-record { color: #3B82F6; font-weight: bold; margin-top: 8px; font-size: 1.1em; }
     #howto-screen { z-index: 35; }
     #howto-screen h1 { font-size: 1.8em; }
     #howto-screen p { font-size: 0.9em; }
@@ -230,34 +276,49 @@
       color: #FFD700;
       margin: 10px 0;
     }
+    #leaderboard-screen {
+      z-index: 45;
+    }
+    #leaderboard-list {
+      max-height: 400px;
+      overflow-y: auto;
+      width: 100%;
+    }
+    .leaderboard-entry {
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      margin: 5px 0;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+    }
     button {
-      padding: 10px 20px; /* Slightly smaller for pop-up */
+      padding: 10px 20px;
       font-size: 1em;
       margin: 5px;
-      background: #1E40AF; /* Darker blue for buttons */
+      background: #1E40AF;
       color: white;
-      border: 2px solid #1E40AF; /* Darker blue border */
+      border: 2px solid #1E40AF;
       border-radius: 6px;
       cursor: pointer;
       transition: 0.2s;
       touch-action: manipulation;
     }
     button:hover, button:active {
-      background: #1E3A8A; /* Main color for hover */
+      background: #1E3A8A;
       transform: scale(1.05);
     }
     #mute-button {
       position: absolute;
       top: 8px;
       left: 8px;
-      background: #1E40AF; /* Darker blue for mute button */
-      border-color: #1E40AF; /* Darker blue border */
+      background: #1E40AF;
+      border-color: #1E40AF;
       z-index: 40;
       font-size: 0.9em;
       padding: 6px 10px;
     }
     .hidden { display: none !important; }
-    /* New Stats Styling */
     #stats {
       position: absolute;
       top: 7px;
@@ -267,9 +328,9 @@
     }
     #stats div {
       margin-bottom: 5px;
-      color: #FFD700; /* Gold for consistency */
+      color: #FFD700;
       font-size: 1.2em;
-      text-shadow: 2px 2px #000000; /* Black shadow for readability */
+      text-shadow: 2px 2px #000000;
     }
   </style>
 </head>
@@ -290,12 +351,13 @@
         <div id="banana-score-display">BANANAS: <span id="total-bananas">0</span></div>
       </div>
       <h1>Flappy CHUMP 🐒</h1>
-      <div id="char-preview"></div> <!-- BIG PREVIEW HERE -->
+      <div id="char-preview"></div>
       <p id="char-name">Classic Monkey</p>
-      <div id="character-grid"></div> <!-- Now dynamic, shows all default chars -->
+      <div id="character-grid"></div>
       <button id="play-button">PLAY!</button>
       <button id="room-button">Room</button>
       <button id="howto-button">How to play</button>
+      <button id="leaderboard-button">Leaderboard</button>
     </div>
 
     <!-- HOW TO -->
@@ -321,7 +383,7 @@
     <!-- ROOM SCREEN -->
     <div id="room-screen" class="hidden">
       <h1>Chump Room</h1>
-      <div id="room-preview"></div> <!-- BIG PREVIEW HERE -->
+      <div id="room-preview"></div>
       <p id="room-name"></p>
       <p id="room-banana-score">BANANAS: 0</p>
       <div id="room-grid"></div>
@@ -331,16 +393,111 @@
     <!-- UNLOCK CONFIRMATION -->
     <div id="unlock-confirmation" class="hidden">
       <h1>Unlock Character</h1>
-      <div id="unlock-preview"></div> <!-- BIG PREVIEW HERE -->
+      <div id="unlock-preview"></div>
       <p id="unlock-message"></p>
       <button id="unlock-button">Unlock</button>
       <button id="back-button">Back</button>
     </div>
 
+    <!-- LEADERBOARD SCREEN -->
+    <div id="leaderboard-screen" class="hidden">
+      <h1>Leaderboard</h1>
+      <div id="leaderboard-list"></div>
+      <button id="leaderboard-back-button">Back</button>
+    </div>
+
     <button id="mute-button">Speaker</button>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, getDocs, query, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4O1Ll7XPCP3VpweybYd90MX9-thsdfiA",
+      authDomain: "flappy-chump.firebaseapp.com",
+      projectId: "flappy-chump",
+      storageBucket: "flappy-chump.firebasestorage.app",
+      messagingSenderId: "734379304815",
+      appId: "1:734379304815:web:11f9a48e8c2e9713c72a9a"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    console.log("Firestore initialized:", db);
+
+    // UUID generation function
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // Initialize player data
+    let uuid = localStorage.getItem('flappyChumpUUID') || generateUUID();
+    let displayName = localStorage.getItem('flappyChumpDisplayName');
+    let highScore = parseInt(localStorage.getItem('flappyMonkeyHighScore')) || 0;
+    let bananaScore = parseInt(localStorage.getItem('flappyMonkeyBananaScore')) || 0;
+
+    if (!displayName) {
+      let nameInput;
+      do {
+        nameInput = prompt("Enter your display name (min 4 characters):");
+        if (!nameInput) nameInput = `Anonymous_${uuid.slice(0, 8)}`;
+      } while (nameInput.length < 4);
+      displayName = nameInput;
+      localStorage.setItem('flappyChumpDisplayName', displayName);
+    }
+    localStorage.setItem('flappyChumpUUID', uuid);
+
+    // Update user stats on load/refresh
+    async function updateUserStats() {
+      try {
+        const q = query(collection(db, 'leaderboard'), where('playerName', '==', uuid));
+        const snapshot = await getDocs(q);
+        let shouldUpdate = false;
+        let currentEntry = null;
+
+        snapshot.forEach((doc) => {
+          currentEntry = doc.data();
+        });
+
+        if (currentEntry) {
+          if (highScore > currentEntry.highScore || bananaScore > currentEntry.bananaScore) {
+            shouldUpdate = true;
+          }
+        } else {
+          shouldUpdate = true; // New user, add entry
+        }
+
+        if (shouldUpdate) {
+          const leaderboardRef = collection(db, 'leaderboard');
+          if (currentEntry) {
+            await updateDoc(doc(leaderboardRef, snapshot.docs[0].id), {
+              highScore: Math.max(highScore, currentEntry.highScore),
+              bananaScore: Math.max(bananaScore, currentEntry.bananaScore),
+              timestamp: new Date()
+            });
+          } else {
+            await addDoc(leaderboardRef, {
+              playerName: uuid,
+              displayName: displayName,
+              highScore: highScore,
+              bananaScore: bananaScore,
+              timestamp: new Date()
+            });
+          }
+          console.log("User stats updated in leaderboard");
+        }
+      } catch (error) {
+        console.error("Error updating user stats: ", error);
+      }
+    }
+    window.addEventListener('load', updateUserStats);
+
     /* ---------- DOM ELEMENTS ---------- */
     const gameBoard = document.getElementById('game-board');
     const chump = document.getElementById('chump');
@@ -376,6 +533,10 @@
     const backButton = document.getElementById('back-button');
     const totalHighScore = document.getElementById('total-high-score');
     const totalBananas = document.getElementById('total-bananas');
+    const leaderboardScreen = document.getElementById('leaderboard-screen');
+    const leaderboardList = document.getElementById('leaderboard-list');
+    const leaderboardBackButton = document.getElementById('leaderboard-back-button');
+    const leaderboardButton = document.getElementById('leaderboard-button');
 
     /* ---------- CHARACTER DATA ---------- */
     const defaultCharacters = {
@@ -389,26 +550,23 @@
       { name: "Ketchup chump", url: "https://i.postimg.cc/VsJw9VR6/ei-1762114785428-removebg-preview.png", cost: 100 },
       { name: "Hitman Chump", url: "https://i.postimg.cc/kg7cxkmh/ei-1762117358501-removebg-preview.png", cost: 100 },
       { name: "pikachump", url: "https://files.catbox.moe/vx5x0m.png", cost: 100 },
-      { name: "Fluffy Chump 1", url: "https://files.catbox.moe/zl332r.png", cost: 100 },
-      { name: "Grumpy Chump 2", url: "https://files.catbox.moe/8vkirq.png", cost: 54 },
-      { name: "ice man Chump 3", url: "https://files.catbox.moe/s59m4b.png", cost: 26 }
-     
+      { name: "New Chump 1", url: "https://files.catbox.moe/zl332r.png", cost: 100 },
+      { name: "New Chump 2", url: "https://files.catbox.moe/8vkirq.png", cost: 100 },
+      { name: "New Chump 3", url: "https://files.catbox.moe/s59m4b.png", cost: 100 },
+      { name: "New Chump 4", url: "https://files.catbox.moe/w4ux27.png", cost: 100 }
     ];
 
     let selectedChar = localStorage.getItem('selectedFlappyChar') || 'monkey';
-    let bananaScore = parseInt(localStorage.getItem('flappyMonkeyBananaScore')) || 0;
-    let previewedChar = null; // Track the last previewed character (locked or unlocked)
+    let previewedChar = null;
 
-    // Load unlocked states from localStorage or set defaults
     Object.keys(defaultCharacters).forEach(char => {
       defaultCharacters[char].unlocked = localStorage.getItem(`flappyCharUnlocked_${char}`) === 'true' || defaultCharacters[char].unlocked;
     });
     lockedCharacters.forEach((char, index) => {
       char.unlocked = localStorage.getItem(`flappyCharUnlocked_locked_${index}`) === 'true' || char.unlocked || false;
-      if (!char.cost) char.cost = 50; // Default cost if not specified
+      if (!char.cost) char.cost = 50;
     });
 
-    // INITIALIZE CHARACTER GRID WITH ALL DEFAULT CHARACTERS
     function updateCharacterGrid() {
       charGrid.innerHTML = '';
       const defaultCharIds = ['monkey', 'banana', 'coconut'];
@@ -424,7 +582,6 @@
       updateCharacterPreview(selectedChar);
     }
 
-    // INITIAL PREVIEW
     updateCharacterGrid();
 
     function updateCharacterPreview(charId) {
@@ -433,12 +590,11 @@
       if (char) {
         charName.textContent = char.name;
         charPreview.style.backgroundImage = `url('${char.url}')`;
-        chump.style.backgroundImage = `url('${char.url}')`; // Update chump in game
+        chump.style.backgroundImage = `url('${char.url}')`;
         localStorage.setItem('selectedFlappyChar', charId);
       }
     }
 
-    /* ---------- CHARACTER SELECTION ---------- */
     function selectCharacter(option) {
       const charId = option.dataset.id;
       const allCharacters = { ...defaultCharacters, ...Object.fromEntries(lockedCharacters.map(c => [c.name.toLowerCase(), c])) };
@@ -450,13 +606,12 @@
             option.classList.add('selected');
             selectedChar = charId;
             updateCharacterPreview(charId);
-            previewedChar = null; // Reset preview after selection
-            // Stay in current screen (home or room)
+            previewedChar = null;
             if (roomScreen.classList.contains('hidden')) {
-              updateCharacterGrid(); // Refresh home grid if on home screen
+              updateCharacterGrid();
             } else {
-              roomPreview.style.backgroundImage = `url('${char.url}')`; // Update room preview
-              roomName.textContent = char.name; // Update room name
+              roomPreview.style.backgroundImage = `url('${char.url}')`;
+              roomName.textContent = char.name;
             }
           } else {
             showUnlockConfirmation(char);
@@ -477,14 +632,14 @@
     function showUnlockScreen(char) {
       roomPreview.style.backgroundImage = `url('${char.url}')`;
       roomName.textContent = char.name;
-      roomBananaScore.textContent = `BANANAS: ${bananaScore}`; // Update banana score in room
+      roomBananaScore.textContent = `BANANAS: ${bananaScore}`;
       roomScreen.classList.remove('hidden');
     }
 
     function updateRoomGrid() {
       roomGrid.innerHTML = '';
       const allCharacters = { ...defaultCharacters, ...Object.fromEntries(lockedCharacters.map(c => [c.name.toLowerCase(), c])) };
-      const characterArray = Object.entries(allCharacters).slice(0, 9); // Limit to 9 characters
+      const characterArray = Object.entries(allCharacters).slice(0, 9);
       characterArray.forEach(([id, char]) => {
         const option = document.createElement('div');
         option.className = `char-option ${!char.unlocked ? 'locked' : ''} ${selectedChar === id ? 'selected' : ''}`;
@@ -496,7 +651,6 @@
         option.addEventListener('click', () => selectCharacter(option));
         roomGrid.appendChild(option);
       });
-      // Add the 10th character if it exists
       if (Object.entries(allCharacters).length > 9) {
         const extraChar = Object.entries(allCharacters)[9];
         const option = document.createElement('div');
@@ -523,69 +677,64 @@
     }, { passive: false });
 
     playButton.addEventListener('click', startNewGame);
-    playAgainButton.addEventListener('click', startNewGame); // Sync with "PLAY!"
+    playAgainButton.addEventListener('click', startNewGame);
 
     function startNewGame() {
       charSelect.classList.add('hidden');
-      gameOverScreen.classList.add('hidden'); // Ensure game-over screen is hidden for both
+      gameOverScreen.classList.add('hidden');
       resetGame();
-      // Start game loop and spawning only on first tap
-      muteButton.classList.add('hidden'); // Hide mute button
+      muteButton.classList.add('hidden');
     }
 
     roomButton.addEventListener('click', () => {
       updateRoomGrid();
-      roomBananaScore.textContent = `BANANAS: ${bananaScore}`; // Update banana score when entering room
+      roomBananaScore.textContent = `BANANAS: ${bananaScore}`;
       charSelect.classList.add('hidden');
       roomScreen.classList.remove('hidden');
-      muteButton.classList.add('hidden'); // Hide mute button
-      previewedChar = null; // Reset preview when entering room
+      muteButton.classList.add('hidden');
+      previewedChar = null;
     });
 
     roomBackButton.addEventListener('click', () => {
-      updateCharacterGrid(); // Refresh charGrid with all default chars
+      updateCharacterGrid();
       roomScreen.classList.add('hidden');
       charSelect.classList.remove('hidden');
-      muteButton.classList.remove('hidden'); // Show mute button
-      previewedChar = null; // Reset preview when leaving room
+      muteButton.classList.remove('hidden');
+      previewedChar = null;
     });
 
-    /* ---------- HIGH SCORES ---------- */
-    let highScore = parseInt(localStorage.getItem('flappyMonkeyHighScore')) || 0;
     highScoreDisplay.textContent = `HIGH: ${highScore}`;
-    totalHighScore.textContent = highScore; // Initialize home screen high score
+    totalHighScore.textContent = highScore;
 
     function saveHighScores() {
       if (score > highScore) {
         highScore = score;
         localStorage.setItem('flappyMonkeyHighScore', highScore);
         highScoreDisplay.textContent = `HIGH: ${highScore}`;
-        totalHighScore.textContent = highScore; // Update home screen
+        totalHighScore.textContent = highScore;
         newRecordMsg.classList.remove('hidden');
       } else {
         newRecordMsg.classList.add('hidden');
       }
     }
 
-    /* ---------- GAME CONSTANTS ---------- */
     const BASE_OBSTACLE_SPEED = 1.5;
     const BASE_SPAWN_RATE = 2500;
-    const SPEED_INCREASE_PER_5 = 0.23; // Reduced speed increase for smoother progression
+    const SPEED_INCREASE_PER_5 = 0.23;
     const SPAWN_RATE_DECREASE_PER_5 = 200;
-    const GRAVITY = 0.37; // Adjusted for smoother fall
-    const JUMP_STRENGTH = -7.5; // Adjusted for stronger jump
+    const GRAVITY = 0.37;
+    const JUMP_STRENGTH = -7.5;
     const GAP_SIZE = 200;
-    const HITBOX_BUFFER = 10; // Increased buffer to improve collision detection
-    const GAME_WIDTH = 400; /* Updated width */
-    const GAME_HEIGHT = 700; /* Updated height */
+    const HITBOX_BUFFER = 10;
+    const GAME_WIDTH = 400;
+    const GAME_HEIGHT = 700;
     const CHUMP_SIZE = 50;
     const OBSTACLE_WIDTH = 40;
-    const CHUMP_X = 100; /* Adjusted for new width */
+    const CHUMP_X = 100;
     const BANANA_SIZE = 30;
-    const BANANA_SPAWN_CHANCE = 0.45; // 30% chance
-    const MAX_OBSTACLE_SPEED = 5; // Cap maximum speed
+    const BANANA_SPAWN_CHANCE = 0.45;
+    const MAX_OBSTACLE_SPEED = 5;
 
-    /* ---------- DYNAMIC STATE ---------- */
     let gameLoopId = null;
     let obstacleSpawnId = null;
     let chumpY = GAME_HEIGHT / 2;
@@ -599,9 +748,8 @@
     let audioUnlocked = false;
     let currentObstacleSpeed = BASE_OBSTACLE_SPEED;
     let currentSpawnRate = BASE_SPAWN_RATE;
-    let awaitingFirstTap = true; // Flag for first tap to start
+    let awaitingFirstTap = true;
 
-    /* ---------- AUDIO: TRUE RANDOM + DING ---------- */
     const bgmUrls = [
       'https://files.catbox.moe/ivr37p.mp3',
       'https://files.catbox.moe/m7nr8a.mp3',
@@ -621,7 +769,7 @@
 
     let currentBGM = null;
 
-    const bananaSound = new Audio('https://files.catbox.moe/pev2v4.wav'); // Replaced sound
+    const bananaSound = new Audio('https://files.catbox.moe/pev2v4.wav');
     bananaSound.volume = 0.23;
     bananaSound.preload = 'auto';
 
@@ -655,7 +803,6 @@
       audioUnlocked = true;
     }
 
-    /* ---------- SPAWN TIMER RESTART ---------- */
     function restartSpawnTimer() {
       if (obstacleSpawnId) {
         clearInterval(obstacleSpawnId);
@@ -663,10 +810,9 @@
       }
     }
 
-    /* ---------- DIFFICULTY ---------- */
     function increaseDifficulty() {
       if (score > 0 && score % 3 === 0 && gameStarted && !isGameOver) {
-        currentObstacleSpeed = Math.min(MAX_OBSTACLE_SPEED, currentObstacleSpeed + SPEED_INCREASE_PER_5); // Cap speed
+        currentObstacleSpeed = Math.min(MAX_OBSTACLE_SPEED, currentObstacleSpeed + SPEED_INCREASE_PER_5);
         const newRate = Math.max(1200, currentSpawnRate - SPAWN_RATE_DECREASE_PER_5);
         if (newRate !== currentSpawnRate) {
           currentSpawnRate = newRate;
@@ -675,12 +821,11 @@
       }
     }
 
-    /* ---------- GAME LOGIC ---------- */
     function updateScore() {
       scoreDisplay.textContent = score;
       bananaScoreDisplay.textContent = `BANANAS: ${bananaScore}`;
-      totalHighScore.textContent = highScore; // Update home screen high score
-      totalBananas.textContent = bananaScore; // Update home screen banana score
+      totalHighScore.textContent = highScore;
+      totalBananas.textContent = bananaScore;
       increaseDifficulty();
     }
 
@@ -703,9 +848,9 @@
       stopBGM();
       isGameOver = false;
       gameStarted = false;
-      score = 0; // Reset score, but keep bananaScore
-      currentObstacleSpeed = BASE_OBSTACLE_SPEED; // Ensure speed resets
-      currentSpawnRate = BASE_SPAWN_RATE; // Ensure spawn rate resets
+      score = 0;
+      currentObstacleSpeed = BASE_OBSTACLE_SPEED;
+      currentSpawnRate = BASE_SPAWN_RATE;
       chumpY = GAME_HEIGHT / 2;
       chumpVelocity = 0;
       updateScore();
@@ -714,7 +859,7 @@
       chump.style.display = 'block';
       chump.style.top = `${chumpY}px`;
       newRecordMsg.classList.add('hidden');
-      awaitingFirstTap = true; // Wait for first tap to start
+      awaitingFirstTap = true;
     }
 
     function endGame() {
@@ -727,7 +872,6 @@
       finalScoreDisplay.textContent = `Your Score: ${score}`;
       finalBananaScoreDisplay.textContent = `Bananas Collected: ${bananaScore}`;
       saveHighScores();
-      // Save bananaScore and unlocked states to localStorage
       localStorage.setItem('flappyMonkeyBananaScore', bananaScore);
       Object.keys(defaultCharacters).forEach(char => {
         localStorage.setItem(`flappyCharUnlocked_${char}`, defaultCharacters[char].unlocked);
@@ -736,7 +880,10 @@
         localStorage.setItem(`flappyCharUnlocked_locked_${index}`, char.unlocked);
       });
       gameOverScreen.classList.remove('hidden');
-      muteButton.classList.add('hidden'); // Hide mute button
+      muteButton.classList.add('hidden');
+      if (score > highScore) {
+        submitScore();
+      }
     }
 
     function flap() {
@@ -755,22 +902,22 @@
 
     function createObstacle() {
       const minHeight = 50;
-      const maxTopHeight = GAME_HEIGHT - (2 * minHeight) - GAP_SIZE; // Ensure minimum space at top and bottom
+      const maxTopHeight = GAME_HEIGHT - (2 * minHeight) - GAP_SIZE;
       const topHeight = Math.floor(Math.random() * (maxTopHeight - minHeight + 1)) + minHeight;
       const bottomHeight = GAME_HEIGHT - topHeight - GAP_SIZE;
-      const obstacleX = GAME_WIDTH; // Start at right edge
+      const obstacleX = GAME_WIDTH;
 
       const topPipe = document.createElement('div');
       topPipe.className = 'obstacle top';
       topPipe.style.height = `${topHeight}px`;
-      topPipe.style.width = `${OBSTACLE_WIDTH}px`; // Explicit width
+      topPipe.style.width = `${OBSTACLE_WIDTH}px`;
       topPipe.style.left = `${obstacleX}px`;
       gameBoard.appendChild(topPipe);
 
       const bottomPipe = document.createElement('div');
       bottomPipe.className = 'obstacle bottom';
       bottomPipe.style.height = `${bottomHeight}px`;
-      bottomPipe.style.width = `${OBSTACLE_WIDTH}px`; // Explicit width
+      bottomPipe.style.width = `${OBSTACLE_WIDTH}px`;
       bottomPipe.style.left = `${obstacleX}px`;
       gameBoard.appendChild(bottomPipe);
 
@@ -788,7 +935,7 @@
 
     function createBanana(obstacleX, gapTop) {
       if (!gameStarted || isGameOver) return;
-      const bananaY = gapTop + (GAP_SIZE / 2) - (BANANA_SIZE / 2); // Center of the gap
+      const bananaY = gapTop + (GAP_SIZE / 2) - (BANANA_SIZE / 2);
       const bananaElement = document.createElement('div');
       bananaElement.className = 'banana';
       bananaElement.textContent = '🍌';
@@ -880,7 +1027,6 @@
       gameLoopId = requestAnimationFrame(updateGame);
     }
 
-    /* ---------- UNLOCK LOGIC ---------- */
     let selectedCharToUnlock = null;
 
     function showUnlockConfirmation(char) {
@@ -895,12 +1041,12 @@
         bananaScore -= selectedCharToUnlock.cost;
         selectedCharToUnlock.unlocked = true;
         updateScore();
-        roomBananaScore.textContent = `BANANAS: ${bananaScore}`; // Update room banana score
+        roomBananaScore.textContent = `BANANAS: ${bananaScore}`;
         const index = lockedCharacters.findIndex(c => c.name.toLowerCase() === selectedCharToUnlock.name.toLowerCase());
         localStorage.setItem(`flappyCharUnlocked_locked_${index}`, 'true');
-        updateRoomGrid(); // Refresh room grid to reflect unlocked status
+        updateRoomGrid();
         unlockConfirmation.classList.add('hidden');
-        previewedChar = null; // Reset preview after unlock
+        previewedChar = null;
       } else {
         unlockMessage.textContent = "Not enough bananas!";
       }
@@ -911,7 +1057,7 @@
       if (option) {
         const charName = option.dataset.id;
         const char = lockedCharacters.find(c => c.name.toLowerCase() === charName.toLowerCase()) || defaultCharacters[charName];
-        if (char) selectCharacter(option); // Handle both locked and unlocked via selectCharacter
+        if (char) selectCharacter(option);
       }
     });
 
@@ -920,21 +1066,20 @@
     });
 
     backButton.addEventListener('click', () => {
-      unlockMessage.textContent = `Unlock for ${selectedCharToUnlock.cost} bananas?`; // Reset message
+      unlockMessage.textContent = `Unlock for ${selectedCharToUnlock.cost} bananas?`;
       unlockConfirmation.classList.add('hidden');
     });
 
-    /* ---------- EVENT LISTENERS ---------- */
     goHomeButton.addEventListener('click', () => {
-      updateCharacterGrid(); // Refresh charGrid with all default chars
+      updateCharacterGrid();
       gameOverScreen.classList.add('hidden');
       charSelect.classList.remove('hidden');
-      muteButton.classList.remove('hidden'); // Show mute button
+      muteButton.classList.remove('hidden');
     });
     howtoButton.addEventListener('click', () => howtoScreen.classList.remove('hidden'));
     howtoCloseButton.addEventListener('click', () => howtoScreen.classList.add('hidden'));
     muteButton.addEventListener('click', () => {
-      if (!muteButton.classList.contains('hidden')) { // Only toggle if visible
+      if (!muteButton.classList.contains('hidden')) {
         isMuted = !isMuted;
         muteButton.textContent = isMuted ? 'Muted' : 'Speaker';
         if (isMuted && currentBGM) currentBGM.pause();
@@ -956,7 +1101,7 @@
     document.addEventListener('keydown', e => {
       if (e.code === 'Space') { e.preventDefault(); flap(); }
       else if (e.key.toLowerCase() === 'm') {
-        if (!muteButton.classList.contains('hidden')) { // Only toggle if visible
+        if (!muteButton.classList.contains('hidden')) {
           isMuted = !isMuted;
           muteButton.textContent = isMuted ? 'Muted' : 'Speaker';
           if (isMuted && currentBGM) currentBGM.pause();
@@ -966,6 +1111,54 @@
     });
 
     updateScore();
+
+    // Leaderboard functionality
+    leaderboardButton.addEventListener('click', () => {
+      loadLeaderboard();
+      charSelect.classList.add('hidden');
+      leaderboardScreen.classList.remove('hidden');
+      muteButton.classList.add('hidden');
+    });
+
+    leaderboardBackButton.addEventListener('click', () => {
+      leaderboardScreen.classList.add('hidden');
+      charSelect.classList.remove('hidden');
+      muteButton.classList.remove('hidden');
+    });
+
+    function loadLeaderboard() {
+      const leaderboardRef = collection(db, 'leaderboard');
+      console.log("Setting up leaderboard listener...");
+      onSnapshot(leaderboardRef, (snapshot) => {
+        leaderboardList.innerHTML = '';
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const entry = document.createElement('div');
+          entry.className = 'leaderboard-entry';
+          entry.innerHTML = `<span>${data.displayName}: High ${data.highScore}, Bananas ${data.bananaScore}</span>`;
+          leaderboardList.appendChild(entry);
+        });
+        console.log("Leaderboard updated with", snapshot.size, "entries");
+      }, (error) => {
+        console.error("Leaderboard listener error: ", error);
+        setTimeout(() => loadLeaderboard(), 2000); // Retry after 2 seconds
+      });
+    }
+
+    function submitScore() {
+      const leaderboardRef = collection(db, 'leaderboard');
+      addDoc(leaderboardRef, {
+        playerName: uuid,
+        displayName: displayName,
+        highScore: highScore,
+        bananaScore: bananaScore,
+        timestamp: new Date()
+      }).then(() => {
+        console.log("Score submitted successfully");
+      }).catch((error) => {
+        console.error("Error submitting score: ", error);
+      });
+    }
   </script>
 </body>
 </html>

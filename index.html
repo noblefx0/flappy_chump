@@ -38,6 +38,17 @@
       z-index: 10;
       transition: transform 0.05s linear;
     }
+    /* NEW: CSS for the invulnerability flash */
+    #chump.hit-flash {
+      filter: drop-shadow(0 0 10px red);
+      animation: hit-flash-anim 0.2s linear infinite alternate;
+    }
+    
+    @keyframes hit-flash-anim {
+      from { opacity: 1; }
+      to { opacity: 0.3; }
+    }
+    /* END NEW */
     #rocket-video {
       display: none;
       position: absolute;
@@ -315,7 +326,6 @@
       <source src="" type="video/mp4">
     </video>
 
-    <!-- CHARACTER SELECT -->
     <div id="character-select">
       <div id="stats">
         <div id="high-score-display">HIGH: <span id="total-high-score">0</span></div>
@@ -325,14 +335,12 @@
       <div id="char-preview"></div>
       <p id="char-name">Classic Monkey</p>
       <div id="character-grid"></div>
-      <div id="username-display"></div> <!-- New username box -->
-      <button id="play-button">PLAY!</button>
+      <div id="username-display"></div> <button id="play-button">PLAY!</button>
       <button id="room-button">Room</button>
       <button id="howto-button">How to play</button>
       <button id="leaderboard-button">Leaderboard</button>
     </div>
 
-    <!-- HOW TO -->
     <div id="howto-screen" class="hidden">
       <h1>How to Play</h1>
       <p>Click or tap to flap</p>
@@ -342,7 +350,6 @@
       <button id="howto-close-button">Got it!</button>
     </div>
 
-    <!-- GAME OVER -->
     <div id="game-over-screen" class="hidden">
       <h1>GAME OVER!</h1>
       <p id="final-score">Your Score: 0</p>
@@ -352,7 +359,6 @@
       <button id="play-again-button">Play Again</button>
     </div>
 
-    <!-- ROOM SCREEN -->
     <div id="room-screen" class="hidden">
       <h1>Chump Room</h1>
       <div id="room-preview"></div>
@@ -362,7 +368,6 @@
       <button id="room-back-button">Back</button>
     </div>
 
-    <!-- UNLOCK CONFIRMATION -->
     <div id="unlock-confirmation" class="hidden">
       <h1>Unlock Character</h1>
       <div id="unlock-preview"></div>
@@ -371,7 +376,6 @@
       <button id="back-button">Back</button>
     </div>
 
-    <!-- LEADERBOARD SCREEN -->
     <div id="leaderboard-screen" class="hidden">
       <h1>Leaderboard</h1>
       <div id="leaderboard-list"></div>
@@ -505,7 +509,7 @@
     const backButton = document.getElementById('back-button');
     const totalHighScore = document.getElementById('total-high-score');
     const totalBananas = document.getElementById('total-bananas');
-    const usernameDisplay = document.getElementById('username-display'); // New element
+    const usernameDisplay = document.getElementById('username-display');
     const leaderboardScreen = document.getElementById('leaderboard-screen');
     const leaderboardList = document.getElementById('leaderboard-list');
     const leaderboardBackButton = document.getElementById('leaderboard-back-button');
@@ -522,14 +526,14 @@
     };
 
     const lockedCharacters = [
-      { name: "Cock chump", url: "https://i.postimg.cc/D0ybDcpg/ei-1762113350518-removebg-preview.png", cost: 100 },
-      { name: "Ketchup chump", url: "https://i.postimg.cc/VsJw9VR6/ei-1762114785428-removebg-preview.png", cost: 80 },
-      { name: "Hitman Chump", url: "https://i.postimg.cc/kg7cxkmh/ei-1762117358501-removebg-preview.png", cost: 100 },
-      { name: "pikachump", url: "https://files.catbox.moe/vx5x0m.png", cost: 100 },
-      { name: "New Chump 1", url: "https://files.catbox.moe/zl332r.png", cost: 100 },
-      { name: "New Chump 2", url: "https://files.catbox.moe/8vkirq.png", cost: 26 },
-      { name: "New Chump 3", url: "https://files.catbox.moe/s59m4b.png", cost: 100 },
-      { name: "New Chump 4", url: "https://files.catbox.moe/w4ux27.png", cost: 54 }
+      { name: "Rooster Riser", url: "https://i.postimg.cc/D0ybDcpg/ei-1762113350518-removebg-preview.png", cost: 100, unlocked: false },
+      { name: "Ketchup king", url: "https://i.postimg.cc/VsJw9VR6/ei-1762114785428-removebg-preview.png", cost: 99, unlocked: false },
+      { name: "Sniper swwing", url: "https://i.postimg.cc/kg7cxkmh/ei-1762117358501-removebg-preview.png", cost: 100, unlocked: false },
+      { name: "Pika Power", url: "https://files.catbox.moe/vx5x0m.png", cost: 100, unlocked: false },
+      { name: "Jungle Jive", url: "https://files.catbox.moe/zl332r.png", cost: 100, unlocked: false },
+      { name: "Vine Vipe", url: "https://files.catbox.moe/8vkirq.png", cost: 100, unlocked: false },
+      { name: "Tropican Titan", url: "https://files.catbox.moe/s59m4b.png", cost: 100, unlocked: false },
+      { name: "Island Idol", url: "https://files.catbox.moe/w4ux27.png", cost: 100, unlocked: false }
     ];
 
     let selectedChar = localStorage.getItem('selectedFlappyChar') || 'monkey';
@@ -539,9 +543,22 @@
       defaultCharacters[char].unlocked = localStorage.getItem(`flappyCharUnlocked_${char}`) === 'true' || defaultCharacters[char].unlocked;
     });
     lockedCharacters.forEach((char, index) => {
-      char.unlocked = localStorage.getItem(`flappyCharUnlocked_locked_${index}`) === 'true' || char.unlocked || false;
+      char.unlocked = localStorage.getItem(`flappyCharUnlocked_locked_${index}`) === 'true' || char.unlocked; 
       if (!char.cost) char.cost = 50;
     });
+    
+    function getSelectedCharacter() {
+      const allCharacters = { 
+        ...defaultCharacters, 
+        ...Object.fromEntries(lockedCharacters.map(c => [c.name.toLowerCase(), c])) 
+      };
+      return allCharacters[selectedChar.toLowerCase()] || allCharacters['monkey'];
+    }
+
+    function isSelectedCharLocked() {
+      const char = getSelectedCharacter();
+      return char.cost > 0 && !char.unlocked;
+    }
 
     function updateCharacterGrid() {
       charGrid.innerHTML = '';
@@ -577,7 +594,7 @@
       const char = allCharacters[charId] || allCharacters[charId.toLowerCase()];
       if (char) {
         if (previewedChar === charId) {
-          if (char.unlocked) {
+          if (char.unlocked || char.cost === 0) {
             document.querySelectorAll('.char-option').forEach(el => el.classList.remove('selected'));
             option.classList.add('selected');
             selectedChar = charId;
@@ -615,30 +632,25 @@
     function updateRoomGrid() {
       roomGrid.innerHTML = '';
       const allCharacters = { ...defaultCharacters, ...Object.fromEntries(lockedCharacters.map(c => [c.name.toLowerCase(), c])) };
-      const characterArray = Object.entries(allCharacters).slice(0, 9);
+      const characterArray = Object.entries(defaultCharacters).concat(Object.entries(lockedCharacters.reduce((acc, char) => {
+        acc[char.name.toLowerCase()] = char;
+        return acc;
+      }, {})));
+      
       characterArray.forEach(([id, char]) => {
         const option = document.createElement('div');
-        option.className = `char-option ${!char.unlocked ? 'locked' : ''} ${selectedChar === id ? 'selected' : ''}`;
-        option.dataset.id = id;
+        const charId = id;
+        const isLocked = char.cost > 0 && !char.unlocked;
+        
+        option.className = `char-option ${isLocked ? 'locked' : ''} ${selectedChar === charId ? 'selected' : ''}`;
+        option.dataset.id = charId;
         option.style.backgroundImage = `url('${char.url}')`;
-        if (!char.unlocked) {
+        if (isLocked) {
           option.innerHTML = `<span class="cost">${char.cost} 🍌</span>`;
         }
         option.addEventListener('click', () => selectCharacter(option));
         roomGrid.appendChild(option);
       });
-      if (Object.entries(allCharacters).length > 9) {
-        const extraChar = Object.entries(allCharacters)[9];
-        const option = document.createElement('div');
-        option.className = `char-option ${!extraChar[1].unlocked ? 'locked' : ''} ${selectedChar === extraChar[0] ? 'selected' : ''}`;
-        option.dataset.id = extraChar[0];
-        option.style.backgroundImage = `url('${extraChar[1].url}')`;
-        if (!extraChar[1].unlocked) {
-          option.innerHTML = `<span class="cost">${extraChar[1].cost} 🍌</span>`;
-        }
-        option.addEventListener('click', () => selectCharacter(option));
-        roomGrid.appendChild(option);
-      }
     }
 
     charGrid.addEventListener('click', (e) => {
@@ -708,8 +720,13 @@
     const OBSTACLE_WIDTH = 40;
     const CHUMP_X = 100;
     const BANANA_SIZE = 30;
-    const BANANA_SPAWN_CHANCE = 0.45;
-    const MAX_OBSTACLE_SPEED = 5;
+    const BANANA_SPAWN_CHANCE = 0.25;
+    const MAX_OBSTACLE_SPEED = 4;
+    
+    const MAX_LIVES = 1;
+    let chumpLives = MAX_LIVES;
+    let isInvulnerable = false;
+    const INVULNERABILITY_DURATION = 1500;
 
     let gameLoopId = null;
     let obstacleSpawnId = null;
@@ -796,15 +813,27 @@
         }
       }
     }
+    
+    function displayLives() {
+      let livesHtml = `<span style="color: #FF6347;">Lives: </span>`;
+      for (let i = 0; i < chumpLives; i++) {
+        livesHtml += '❤️';
+      }
+      highScoreDisplay.innerHTML = `HIGH: ${highScore} | ${livesHtml}`;
+    }
 
     function updateScore() {
-      scoreDisplay.textContent = score;
-      bananaScoreDisplay.textContent = `BANANAS: ${bananaScore}`;
-      totalHighScore.textContent = highScore;
-      totalBananas.textContent = bananaScore;
-      usernameDisplay.textContent = `USER: ${displayName}`; // Update username on score change
-      increaseDifficulty();
-    }
+  scoreDisplay.textContent = score;
+  bananaScoreDisplay.textContent = `BANANAS: ${bananaScore}`;
+  totalHighScore.textContent = highScore;
+  totalBananas.textContent = bananaScore;
+  usernameDisplay.textContent = `USER: ${displayName}`;
+  // Only increase difficulty if game is fully active (not reviving)
+  if (gameStarted && !isInvulnerable && !isGameOver && score > 0 && score % 3 === 0) {
+    increaseDifficulty();
+  }
+  displayLives();
+}
 
     function resetObstacles() {
       obstacles.forEach(o => {
@@ -820,26 +849,33 @@
     }
 
     function resetGame() {
-      if (gameLoopId) cancelAnimationFrame(gameLoopId);
-      if (obstacleSpawnId) clearInterval(obstacleSpawnId);
-      stopBGM();
-      isGameOver = false;
-      gameStarted = false;
-      score = 0;
-      currentObstacleSpeed = BASE_OBSTACLE_SPEED;
-      currentSpawnRate = BASE_SPAWN_RATE;
-      chumpY = GAME_HEIGHT / 2;
-      chumpVelocity = 0;
-      updateScore();
-      resetObstacles();
-      resetBananas();
-      chump.style.display = 'block';
-      chump.style.top = `${chumpY}px`;
-      newRecordMsg.classList.add('hidden');
-      awaitingFirstTap = true;
-    }
+  if (gameLoopId) cancelAnimationFrame(gameLoopId);
+  if (obstacleSpawnId) clearInterval(obstacleSpawnId);
+  stopBGM();
+  
+  chumpLives = getSelectedCharacter().cost > 0 ? 3 : 1; // Tweak here
+  isInvulnerable = false;
+  chump.classList.remove('hit-flash');
+  
+  isGameOver = false;
+  gameStarted = false;
+  score = 0;
+  currentObstacleSpeed = BASE_OBSTACLE_SPEED;
+  currentSpawnRate = BASE_SPAWN_RATE;
+  chumpY = GAME_HEIGHT / 2;
+  chumpVelocity = 0;
+  updateScore();
+  resetObstacles();
+  resetBananas();
+  chump.style.display = 'block';
+  chump.style.top = `${chumpY}px`;
+  chump.style.transform = 'rotate(0deg)';
+  newRecordMsg.classList.add('hidden');
+  awaitingFirstTap = true;
+  displayLives();
+}
 
-    function endGame() {
+    function chumpDied() {
       if (isGameOver) return;
       isGameOver = true;
       cancelAnimationFrame(gameLoopId);
@@ -862,6 +898,42 @@
         submitScore();
       }
     }
+
+    function endGame() {
+  if (isGameOver || isInvulnerable) return;
+
+  chumpLives -= 1;
+  displayLives();
+  
+  if (chumpLives <= 0) {
+    chumpDied();
+  } else {
+    isInvulnerable = true;
+    chump.classList.add('hit-flash');
+    chumpY = GAME_HEIGHT / 2;
+    chumpVelocity = 0; // Reset fall speed to baseline
+    chump.style.top = `${chumpY}px`;
+    chump.style.transform = 'rotate(0deg)';
+  
+  
+    // Freeze difficulty at current state (no reset, no increase)
+    const preReviveSpeed = currentObstacleSpeed; // Store current speed
+    
+    
+    // Pause game loop
+    cancelAnimationFrame(gameLoopId);
+    
+    setTimeout(() => {
+      isInvulnerable = false;
+      chump.classList.remove('hit-flash');
+      // Restore pre-revive difficulty and resume
+      currentObstacleSpeed = preReviveSpeed;
+      currentSpawnRate = preReviveSpawnRate;
+      restartSpawnTimer(); // Sync spawn rate
+      if (!isGameOver) gameLoopId = requestAnimationFrame(updateGame);
+    }, INVULNERABILITY_DURATION);
+  }
+}
 
     function flap() {
       if (isGameOver) return;
@@ -949,31 +1021,31 @@
       }
     }
 
-    function updateBananas() {
-      for (let i = bananas.length - 1; i >= 0; i--) {
-        const banana = bananas[i];
-        banana.x -= currentObstacleSpeed;
-        banana.element.style.left = `${banana.x}px`;
+   function updateBananas() {
+  for (let i = bananas.length - 1; i >= 0; i--) {
+    const banana = bananas[i];
+    banana.x -= currentObstacleSpeed;
+    banana.element.style.left = `${banana.x}px`;
 
-        const chumpTop = chumpY;
-        const chumpBottom = chumpY + CHUMP_SIZE;
-        const bananaTop = banana.y;
-        const bananaBottom = banana.y + BANANA_SIZE;
-        if (CHUMP_X + CHUMP_SIZE > banana.x && CHUMP_X < banana.x + BANANA_SIZE &&
-            chumpBottom > bananaTop && chumpTop < bananaBottom) {
-          banana.element.remove();
-          bananas.splice(i, 1);
-          bananaScore++;
-          updateScore();
-          playBananaSound();
-        }
-
-        if (banana.x < -BANANA_SIZE) {
-          banana.element.remove();
-          bananas.splice(i, 1);
-        }
-      }
+    const chumpTop = chumpY;
+    const chumpBottom = chumpY + CHUMP_SIZE;
+    const bananaTop = banana.y;
+    const bananaBottom = banana.y + BANANA_SIZE;
+    if (CHUMP_X + CHUMP_SIZE > banana.x && CHUMP_X < banana.x + BANANA_SIZE &&
+        chumpBottom > bananaTop && chumpTop < bananaBottom) {
+      banana.element.remove();
+      bananas.splice(i, 1);
+      bananaScore++; // Keep banana score for unlocks
+      updateScore();
+      playBananaSound();
     }
+
+    if (banana.x < -BANANA_SIZE) {
+      banana.element.remove();
+      bananas.splice(i, 1);
+    }
+  }
+}
 
     function checkCollision(obstacle) {
       const chumpTop = chumpY;
@@ -988,6 +1060,7 @@
     }
 
     function updateChump() {
+      if (isGameOver) return;
       chumpVelocity += GRAVITY;
       chumpY += chumpVelocity;
       chump.style.top = `${chumpY}px`;
@@ -1043,7 +1116,9 @@
     });
 
     backButton.addEventListener('click', () => {
-      unlockMessage.textContent = `Unlock for ${selectedCharToUnlock.cost} bananas?`;
+      if (selectedCharToUnlock) {
+        unlockMessage.textContent = `Unlock for ${selectedCharToUnlock.cost} bananas?`;
+      }
       unlockConfirmation.classList.add('hidden');
     });
 
@@ -1108,15 +1183,13 @@
       console.log("Setting up leaderboard listener...");
       onSnapshot(leaderboardRef, (snapshot) => {
         leaderboardList.innerHTML = '';
-        // Collect and sort entries by highScore descending
         const entries = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
           entries.push({ id: doc.id, ...data });
         });
-        entries.sort((a, b) => b.highScore - a.highScore); // Sort by highScore, highest first
-        // Limit to top 20, display with black bold names and white bold stats
-        const top20 = entries.slice(0, 20); // Load only top 20
+        entries.sort((a, b) => b.highScore - a.highScore);
+        const top20 = entries.slice(0, 20);
         top20.forEach((entry, index) => {
           const entryDiv = document.createElement('div');
           entryDiv.className = 'leaderboard-entry';
@@ -1126,7 +1199,7 @@
         console.log("Leaderboard updated with up to 20 entries, showing top 10 with scroll");
       }, (error) => {
         console.error("Leaderboard listener error: ", error);
-        setTimeout(() => loadLeaderboard(), 2000); // Retry on error
+        setTimeout(() => loadLeaderboard(), 2000);
       });
     }
 

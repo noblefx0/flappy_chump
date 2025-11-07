@@ -429,50 +429,90 @@
     }
     localStorage.setItem('flappyChumpUUID', uuid);
 
-    // Update user stats on load/refresh
-    async function updateUserStats() {
-      try {
-        const q = query(collection(db, 'leaderboard'), where('playerName', '==', uuid));
-        const snapshot = await getDocs(q);
-        let shouldUpdate = false;
-        let currentEntry = null;
+   async function updateUserStats() {
+  const xUsername = localStorage.getItem('flappyChumpXUsername') || '';
+  try {
+    const q = query(collection(db, 'leaderboard'), where('playerName', '==', uuid));
+    const snapshot = await getDocs(q);
+    let shouldUpdate = false;
+    let currentEntry = null;
 
-        snapshot.forEach((doc) => {
-          currentEntry = doc.data();
-        });
+    snapshot.forEach((doc) => {
+      currentEntry = doc.data();
+    });
 
-        if (currentEntry) {
-          if (highScore > currentEntry.highScore || bananaScore > currentEntry.bananaScore) {
-            shouldUpdate = true;
-          }
-        } else {
-          shouldUpdate = true; // New user, add entry
-        }
-
-        if (shouldUpdate) {
-          const leaderboardRef = collection(db, 'leaderboard');
-          if (currentEntry) {
-            await updateDoc(doc(leaderboardRef, snapshot.docs[0].id), {
-              highScore: Math.max(highScore, currentEntry.highScore),
-              bananaScore: Math.max(bananaScore, currentEntry.bananaScore),
-              timestamp: new Date()
-            });
-          } else {
-            await addDoc(leaderboardRef, {
-              playerName: uuid,
-              displayName: displayName,
-              highScore: highScore,
-              bananaScore: bananaScore,
-              timestamp: new Date()
-            });
-          }
-          console.log("User stats updated in leaderboard");
-        }
-      } catch (error) {
-        console.error("Error updating user stats: ", error);
+    if (currentEntry) {
+      if (highScore > currentEntry.highScore || bananaScore > currentEntry.bananaScore || xUsername !== currentEntry.xUsername) {
+        shouldUpdate = true;
       }
+    } else {
+      shouldUpdate = true; // New user
     }
-    window.addEventListener('load', updateUserStats);
+
+    if (shouldUpdate) {
+      const leaderboardRef = collection(db, 'leaderboard');
+      if (currentEntry) {
+        await updateDoc(doc(leaderboardRef, snapshot.docs[0].id), {
+          highScore: Math.max(highScore, currentEntry.highScore),
+          bananaScore: Math.max(bananaScore, currentEntry.bananaScore),
+          xUsername: xUsername,
+          timestamp: new Date()
+        });
+      } else {
+        await addDoc(leaderboardRef, {
+          playerName: uuid,
+          displayName: displayName,
+          highScore: highScore,
+          bananaScore: bananaScore,
+          xUsername: xUsername,
+          timestamp: new Date()
+        });
+      }
+      console.log("User stats updated in leaderboard with X username");
+    }
+  } catch (error) {
+    console.error("Error updating user stats: ", error);
+  }
+}
+    
+    
+    window.addEventListener('load', () => {
+  let uuid = localStorage.getItem('flappyChumpUUID') || generateUUID();
+  let displayName = localStorage.getItem('flappyChumpDisplayName');
+  let highScore = parseInt(localStorage.getItem('flappyMonkeyHighScore')) || 0;
+  let bananaScore = parseInt(localStorage.getItem('flappyMonkeyBananaScore')) || 0;
+  let xUsername = localStorage.getItem('flappyChumpXUsername');
+
+  if (!displayName) {
+    let nameInput;
+    do {
+      nameInput = prompt("Enter your onetime display name (min 4 characters):");
+      if (!nameInput) nameInput = `Anonymous_${uuid.slice(0, 8)}`;
+    } while (nameInput.length < 4);
+    displayName = nameInput;
+    localStorage.setItem('flappyChumpDisplayName', displayName);
+  }
+
+  // Prompt for X username every load until set
+  while (!xUsername) {
+    let xInput = prompt("Enter your onetime X username (e.g., @username, required to enhance leaderboard - click Cancel to skip):");
+    if (xInput) {
+      if (xInput.startsWith('@') && xInput.length >= 3) {
+        xUsername = xInput;
+        localStorage.setItem('flappyChumpXUsername', xUsername);
+        break; // Stop prompting once set
+      } else {
+        alert("Please enter a valid X username starting with @ (e.g., @username)");
+      }
+    } else {
+      break; // Skip if Cancel clicked
+    }
+  }
+
+  localStorage.setItem('flappyChumpUUID', uuid);
+  updateUserStats();
+  // Rest of your load logic...
+});
 
     /* ---------- DOM ELEMENTS ---------- */
     const gameBoard = document.getElementById('game-board');
@@ -526,14 +566,14 @@
     };
 
     const lockedCharacters = [
-      { name: "Rooster Riser", url: "https://i.postimg.cc/D0ybDcpg/ei-1762113350518-removebg-preview.png", cost: 100, unlocked: false },
-      { name: "Ketchup king", url: "https://i.postimg.cc/VsJw9VR6/ei-1762114785428-removebg-preview.png", cost: 99, unlocked: false },
-      { name: "Sniper swwing", url: "https://i.postimg.cc/kg7cxkmh/ei-1762117358501-removebg-preview.png", cost: 100, unlocked: false },
-      { name: "Pika Power", url: "https://files.catbox.moe/vx5x0m.png", cost: 100, unlocked: false },
-      { name: "Jungle Jive", url: "https://files.catbox.moe/zl332r.png", cost: 100, unlocked: false },
-      { name: "Vine Vipe", url: "https://files.catbox.moe/8vkirq.png", cost: 100, unlocked: false },
-      { name: "Tropican Titan", url: "https://files.catbox.moe/s59m4b.png", cost: 100, unlocked: false },
-      { name: "Island Idol", url: "https://files.catbox.moe/w4ux27.png", cost: 100, unlocked: false }
+      { name: "Cock chump", url: "https://i.postimg.cc/D0ybDcpg/ei-1762113350518-removebg-preview.png", cost: 100, unlocked: false },
+      { name: "Ketchup chump", url: "https://i.postimg.cc/VsJw9VR6/ei-1762114785428-removebg-preview.png", cost: 80, unlocked: false },
+      { name: "Hitman Chump", url: "https://i.postimg.cc/kg7cxkmh/ei-1762117358501-removebg-preview.png", cost: 100, unlocked: false },
+      { name: "pikachump", url: "https://files.catbox.moe/vx5x0m.png", cost: 100, unlocked: false },
+      { name: "New Chump 1", url: "https://files.catbox.moe/zl332r.png", cost: 100, unlocked: false },
+      { name: "New Chump 2", url: "https://files.catbox.moe/8vkirq.png", cost: 26, unlocked: false },
+      { name: "New Chump 3", url: "https://files.catbox.moe/s59m4b.png", cost: 100, unlocked: false },
+      { name: "New Chump 4", url: "https://files.catbox.moe/w4ux27.png", cost: 30, unlocked: false }
     ];
 
     let selectedChar = localStorage.getItem('selectedFlappyChar') || 'monkey';
@@ -1179,29 +1219,30 @@
     });
 
     function loadLeaderboard() {
-      const leaderboardRef = collection(db, 'leaderboard');
-      console.log("Setting up leaderboard listener...");
-      onSnapshot(leaderboardRef, (snapshot) => {
-        leaderboardList.innerHTML = '';
-        const entries = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          entries.push({ id: doc.id, ...data });
-        });
-        entries.sort((a, b) => b.highScore - a.highScore);
-        const top20 = entries.slice(0, 20);
-        top20.forEach((entry, index) => {
-          const entryDiv = document.createElement('div');
-          entryDiv.className = 'leaderboard-entry';
-          entryDiv.innerHTML = `<span data-rank="${index + 1}"><strong style="font-size: 1.3em; font-weight: bold; color: black;">${entry.displayName}</strong>: <span style="color: white; font-weight: bold;">High ${entry.highScore}, Bananas ${entry.bananaScore}</span></span>`;
-          leaderboardList.appendChild(entryDiv);
-        });
-        console.log("Leaderboard updated with up to 20 entries, showing top 10 with scroll");
-      }, (error) => {
-        console.error("Leaderboard listener error: ", error);
-        setTimeout(() => loadLeaderboard(), 2000);
-      });
-    }
+  const leaderboardRef = collection(db, 'leaderboard');
+  console.log("Setting up leaderboard listener...");
+  onSnapshot(leaderboardRef, (snapshot) => {
+    leaderboardList.innerHTML = '';
+    const entries = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      entries.push({ id: doc.id, ...data });
+    });
+    entries.sort((a, b) => b.highScore - a.highScore);
+    const top20 = entries.slice(0, 20);
+    top20.forEach((entry, index) => {
+      const entryDiv = document.createElement('div');
+      entryDiv.className = 'leaderboard-entry';
+      const displayNameOrX = entry.xUsername ? `<a href="https://x.com/${entry.xUsername.replace('@', '')}" target="_blank">${entry.xUsername}</a>` : entry.displayName;
+      entryDiv.innerHTML = `<span data-rank="${index + 1}"><strong style="font-size: 1.3em; font-weight: bold; color: black;">${displayNameOrX}</strong>: <span style="color: white; font-weight: bold;">High ${entry.highScore}, Bananas ${entry.bananaScore}</span></span>`;
+      leaderboardList.appendChild(entryDiv);
+    });
+    console.log("Leaderboard updated with up to 20 entries");
+  }, (error) => {
+    console.error("Leaderboard listener error: ", error);
+    setTimeout(() => loadLeaderboard(), 2000);
+  });
+}
 
     function submitScore() {
       const leaderboardRef = collection(db, 'leaderboard');

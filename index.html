@@ -339,6 +339,7 @@
       <button id="room-button">Room</button>
       <button id="howto-button">How to play</button>
       <button id="leaderboard-button">Leaderboard</button>
+      <button id="delete-data-button">Delete My Data</button>
     </div>
 
     <div id="howto-screen" class="hidden">
@@ -475,6 +476,26 @@
   }
 }
     
+    async function deleteMyData() {
+  const uuid = localStorage.getItem('flappyChumpUUID');
+  console.log("Attempting to delete UUID:", uuid);
+  const q = query(collection(db, 'leaderboard'), where('playerName', '==', uuid));
+  const snapshot = await getDocs(q);
+  snapshot.forEach(async (doc) => {
+    await deleteDoc(doc.ref);
+    console.log("Deleted your leaderboard entry:", doc.id);
+  });
+  localStorage.removeItem('flappyMonkeyHighScore');
+  localStorage.removeItem('flappyMonkeyBananaScore');
+  localStorage.removeItem('flappyChumpXUsername');
+  localStorage.removeItem('flappyChumpDisplayName');
+  // Reset all locked character unlocks (0 to 7 for 8 characters)
+  for (let index = 0; index < 8; index++) {
+    localStorage.removeItem(`flappyCharUnlocked_locked_${index}`);
+  }
+  console.log("Local stats and unlocks cleared for a fresh start!");
+  location.reload();
+}
     
     window.addEventListener('load', () => {
   let uuid = localStorage.getItem('flappyChumpUUID') || generateUUID();
@@ -580,7 +601,7 @@
     let previewedChar = null;
 
     Object.keys(defaultCharacters).forEach(char => {
-      defaultCharacters[char].unlocked = localStorage.getItem(`flappyCharUnlocked_${char}`) === 'true' || defaultCharacters[char].unlocked;
+      defaultCharacters[char].unlocked = localStorage.getItem(`{char}`) === 'true' || defaultCharacters[char].unlocked;
     });
     lockedCharacters.forEach((char, index) => {
       char.unlocked = localStorage.getItem(`flappyCharUnlocked_locked_${index}`) === 'true' || char.unlocked; 
@@ -813,6 +834,14 @@
       });
       currentBGM = null;
     }
+    
+    const deleteDataButton = document.getElementById('delete-data-button');
+deleteDataButton.style.display = 'block'; // Show only on your device
+deleteDataButton.addEventListener('click', () => {
+  if (confirm("Are you sure you want to delete ALL your data? This cannot be undone!")) {
+    deleteMyData();
+  }
+});
 
     function playRandomBGM() {
       if (isMuted || currentBGM || !audioUnlocked) return;
